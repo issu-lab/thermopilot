@@ -4,6 +4,14 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Planned
+
+- Report `initializing` throughout the startup guard and use `online` instead of `ok` for normal diagnostic status.
+- Fix HACS rendering of the footer and License badge by replacing their unresolved relative URLs with absolute GitHub URLs.
+- Expand the README project motivation around unified Broadlink and similar IR/RF thermostat control, while documenting compatibility with any suitable Home Assistant switch entities.
+
 ## [0.1.3] - 2026-08-15
 
 ### Changed

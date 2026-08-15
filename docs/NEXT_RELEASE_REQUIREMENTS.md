@@ -7,6 +7,16 @@ This document records approved behavior for the release following `0.1.2`. It is
 - Expose the header with the same HACS-compatible plain Markdown image used by ThermoMatrix.
 - Expose the footer with a direct HTML `img` referencing `assets/issu-open-homelab-badge.png`.
 - Avoid theme-dependent `picture` markup in content rendered by Home Assistant.
+- Use an absolute raw GitHub URL for the footer image because HACS does not rewrite relative paths inside HTML `img` tags.
+- Use an absolute GitHub destination for the License badge because HACS does not reliably rewrite a relative destination around a nested badge image.
+- Add README regression checks for relative HTML image sources and relative badge destinations.
+
+## Project motivation
+
+- Expand the README `Why It Exists` section to reflect the Open Homelab project philosophy: ThermoPilot was created from a real need to provide one consistent thermostat interface for air conditioners and HVAC devices operated through Broadlink or comparable IR/RF remotes.
+- Explain that the integration deliberately consumes standard Home Assistant `switch` entities rather than depending on Broadlink-specific APIs.
+- State clearly that Broadlink, IR and RF devices are common use cases, not requirements: ThermoPilot works with any integration or hardware that exposes suitable momentary or command `switch` entities.
+- Retain the distinction between separate ON/OFF command switches and a stateless toggle switch, with optional or required power feedback according to the selected strategy.
 
 ## Command and feedback separation
 
@@ -41,6 +51,8 @@ This document records approved behavior for the release following `0.1.2`. It is
 - Preserve saved mode, target and preset.
 - Publish an `initializing` diagnostic state with a clear warning not to operate ThermoPilot until it is online.
 - Add a prominent README warning explaining that this guard is intentional and required for correct state synchronization.
+- Make the diagnostic sensor publish `initializing` for the entire initialization guard, regardless of temporary environment-sensor availability.
+- After initialization, use the diagnostic state priority `error`, `degraded`, then `online`; use `online` instead of `ok` for normal operation.
 
 ## Power-sensor availability
 
