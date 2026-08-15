@@ -28,14 +28,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.0` |
+| **Current version** | `0.1.1` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.0 is the first complete implementation. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.1.1 is the first complete implementation. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 ---
 
@@ -271,7 +271,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.0.
+NUT support is not implemented in version 0.1.1.
 
 ---
 
