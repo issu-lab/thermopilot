@@ -1,0 +1,139 @@
+{
+  "title": "ThermoPilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create a thermostat",
+        "description": "Choose a name and the hardware command strategy.",
+        "data": {
+          "name": "Thermostat name",
+          "strategy": "Command strategy"
+        }
+      },
+      "modes": {
+        "title": "Select HVAC modes",
+        "description": "Select at least one thermal mode. Dry mode is available only with discrete commands.",
+        "data": {
+          "modes": "Thermal modes",
+          "enable_dry": "Enable humidity-controlled dry mode"
+        }
+      },
+      "sensors": {
+        "title": "Select environment sensors",
+        "description": "ThermoPilot averages every valid selected sensor. Humidity and pressure are optional.",
+        "data": {
+          "temperature_sensors": "Temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "pressure_sensors": "Pressure sensors"
+        }
+      },
+      "hardware": {
+        "title": "Select hardware commands",
+        "description": "Momentary switches are treated as commands, never as physical feedback.",
+        "data": {
+          "cool_command": "Cool command",
+          "heat_command": "Heat command",
+          "dry_command": "Dry command",
+          "toggle_command": "Toggle command",
+          "power_sensor": "Dedicated power sensor"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure ThermoPilot",
+        "description": "Update modes, sensors and hardware entities. The command strategy and thermostat identity remain unchanged.",
+        "data": {
+          "modes": "Thermal modes",
+          "enable_dry": "Enable humidity-controlled dry mode",
+          "temperature_sensors": "Temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "pressure_sensors": "Pressure sensors",
+          "cool_command": "Cool command",
+          "heat_command": "Heat command",
+          "dry_command": "Dry command",
+          "toggle_command": "Toggle command",
+          "power_sensor": "Dedicated power sensor"
+        }
+      }
+    },
+    "error": {
+      "select_at_least_one_mode": "Select at least one thermal mode.",
+      "temperature_required": "Select at least one temperature sensor.",
+      "humidity_required_for_dry": "Dry mode requires at least one humidity sensor.",
+      "dry_command_required": "Dry mode requires a command entity.",
+      "mode_command_required": "Every enabled thermal mode requires a command entity."
+    },
+    "abort": {
+      "already_configured": "A thermostat with this name is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Advanced ThermoPilot settings",
+        "description": "Defaults are recommended for most installations. Change only values that have been validated for the connected equipment.",
+        "data": {
+          "minimum_temperature": "Minimum target temperature",
+          "maximum_temperature": "Maximum target temperature",
+          "temperature_step": "Temperature step",
+          "hysteresis": "Thermal hysteresis",
+          "temperature_valid_min": "Minimum valid sensor temperature",
+          "temperature_valid_max": "Maximum valid sensor temperature",
+          "humidity_valid_min": "Minimum valid humidity",
+          "humidity_valid_max": "Maximum valid humidity",
+          "pressure_valid_min": "Minimum valid pressure",
+          "pressure_valid_max": "Maximum valid pressure",
+          "startup_command_delay": "Startup command delay",
+          "restore_off_on_delay": "Restore delay between OFF and ON",
+          "dry_humidity_on": "Dry ON humidity",
+          "dry_humidity_off": "Dry OFF humidity",
+          "dry_minimum_interval": "Minimum dry command interval",
+          "power_off_below": "Power below which the device is off",
+          "power_on_above": "Power above which the device is on",
+          "power_stabilization": "Manual power-change stabilization",
+          "toggle_pulse_duration": "Toggle pulse duration",
+          "feedback_timeout": "Power feedback timeout",
+          "maximum_attempts": "Maximum command attempts",
+          "notification_service": "Optional notification action",
+          "preset_home_cool": "Home preset — Cool",
+          "preset_home_heat": "Home preset — Heat",
+          "preset_away_cool": "Away preset — Cool",
+          "preset_away_heat": "Away preset — Heat",
+          "preset_sleep_cool": "Sleep preset — Cool",
+          "preset_sleep_heat": "Sleep preset — Heat",
+          "preset_comfort_cool": "Comfort preset — Cool",
+          "preset_comfort_heat": "Comfort preset — Heat"
+        }
+      }
+    },
+    "error": {
+      "invalid_temperature_range": "Minimum target temperature must be lower than maximum.",
+      "invalid_sensor_range": "Every minimum sensor value must be lower than its maximum.",
+      "invalid_dry_range": "Dry OFF humidity must be lower than Dry ON humidity.",
+      "invalid_power_range": "Power OFF threshold must be lower than the ON threshold."
+    }
+  },
+  "selector": {
+    "strategy": {
+      "options": {
+        "discrete_commands": "Discrete ON and OFF commands",
+        "toggle_with_power_feedback": "Toggle with dedicated power feedback"
+      }
+    },
+    "thermal_mode": {
+      "options": {
+        "cool": "Cool",
+        "heat": "Heat"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "diagnostics": {
+        "name": "Diagnostics"
+      },
+      "power_feedback_status": {
+        "name": "Power feedback status"
+      }
+    }
+  }
+}

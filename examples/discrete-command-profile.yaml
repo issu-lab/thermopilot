@@ -1,0 +1,20 @@
+# Reference only. Production setup is performed through the Home Assistant UI.
+name: "Living Room Thermostat"
+strategy: discrete_commands
+modes: [cool, heat]
+enable_dry: true
+temperature_sensors:
+  - sensor.living_room_temperature
+humidity_sensors:
+  - sensor.living_room_humidity
+pressure_sensors:
+  - sensor.living_room_pressure
+commands:
+  cool: switch.air_conditioner_cool_command
+  heat: switch.air_conditioner_heat_command
+  dry: switch.air_conditioner_dry_command
+startup_command_delay: 60
+restore_off_on_delay: 10
+dry_humidity_on: 60
+dry_humidity_off: 55
+dry_minimum_interval: 300

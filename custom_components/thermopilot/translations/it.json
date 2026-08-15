@@ -1,0 +1,139 @@
+{
+  "title": "ThermoPilot",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Crea un termostato",
+        "description": "Scegli un nome e la strategia dei comandi hardware.",
+        "data": {
+          "name": "Nome del termostato",
+          "strategy": "Strategia di comando"
+        }
+      },
+      "modes": {
+        "title": "Seleziona le modalità HVAC",
+        "description": "Seleziona almeno una modalità termica. La deumidificazione è disponibile soltanto con comandi distinti.",
+        "data": {
+          "modes": "Modalità termiche",
+          "enable_dry": "Abilita deumidificazione controllata dall'umidità"
+        }
+      },
+      "sensors": {
+        "title": "Seleziona i sensori ambientali",
+        "description": "ThermoPilot calcola la media di tutti i sensori validi selezionati. Umidità e pressione sono opzionali.",
+        "data": {
+          "temperature_sensors": "Sensori di temperatura",
+          "humidity_sensors": "Sensori di umidità",
+          "pressure_sensors": "Sensori di pressione"
+        }
+      },
+      "hardware": {
+        "title": "Seleziona i comandi hardware",
+        "description": "Gli switch momentanei sono trattati come comandi e mai come feedback fisico.",
+        "data": {
+          "cool_command": "Comando raffrescamento",
+          "heat_command": "Comando riscaldamento",
+          "dry_command": "Comando deumidificazione",
+          "toggle_command": "Comando toggle",
+          "power_sensor": "Sensore di consumo dedicato"
+        }
+      },
+      "reconfigure": {
+        "title": "Riconfigura ThermoPilot",
+        "description": "Aggiorna modalità, sensori ed entità hardware. La strategia di comando e l'identità del termostato restano invariate.",
+        "data": {
+          "modes": "Modalità termiche",
+          "enable_dry": "Abilita deumidificazione controllata dall'umidità",
+          "temperature_sensors": "Sensori di temperatura",
+          "humidity_sensors": "Sensori di umidità",
+          "pressure_sensors": "Sensori di pressione",
+          "cool_command": "Comando raffrescamento",
+          "heat_command": "Comando riscaldamento",
+          "dry_command": "Comando deumidificazione",
+          "toggle_command": "Comando toggle",
+          "power_sensor": "Sensore di consumo dedicato"
+        }
+      }
+    },
+    "error": {
+      "select_at_least_one_mode": "Seleziona almeno una modalità termica.",
+      "temperature_required": "Seleziona almeno un sensore di temperatura.",
+      "humidity_required_for_dry": "La modalità dry richiede almeno un sensore di umidità.",
+      "dry_command_required": "La modalità dry richiede un'entità di comando.",
+      "mode_command_required": "Ogni modalità termica abilitata richiede un'entità di comando."
+    },
+    "abort": {
+      "already_configured": "Un termostato con questo nome è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Impostazioni avanzate di ThermoPilot",
+        "description": "I valori predefiniti sono consigliati per la maggior parte delle installazioni. Modifica soltanto valori convalidati per l'apparecchiatura collegata.",
+        "data": {
+          "minimum_temperature": "Temperatura target minima",
+          "maximum_temperature": "Temperatura target massima",
+          "temperature_step": "Passo della temperatura",
+          "hysteresis": "Isteresi termica",
+          "temperature_valid_min": "Temperatura sensore minima valida",
+          "temperature_valid_max": "Temperatura sensore massima valida",
+          "humidity_valid_min": "Umidità minima valida",
+          "humidity_valid_max": "Umidità massima valida",
+          "pressure_valid_min": "Pressione minima valida",
+          "pressure_valid_max": "Pressione massima valida",
+          "startup_command_delay": "Ritardo comandi all'avvio",
+          "restore_off_on_delay": "Ritardo tra OFF e ON al ripristino",
+          "dry_humidity_on": "Umidità attivazione dry",
+          "dry_humidity_off": "Umidità disattivazione dry",
+          "dry_minimum_interval": "Intervallo minimo comandi dry",
+          "power_off_below": "Potenza sotto la quale il dispositivo è spento",
+          "power_on_above": "Potenza sopra la quale il dispositivo è acceso",
+          "power_stabilization": "Stabilizzazione variazione manuale consumo",
+          "toggle_pulse_duration": "Durata impulso toggle",
+          "feedback_timeout": "Timeout feedback consumo",
+          "maximum_attempts": "Numero massimo di tentativi",
+          "notification_service": "Azione di notifica opzionale",
+          "preset_home_cool": "Preset Casa — Raffrescamento",
+          "preset_home_heat": "Preset Casa — Riscaldamento",
+          "preset_away_cool": "Preset Assente — Raffrescamento",
+          "preset_away_heat": "Preset Assente — Riscaldamento",
+          "preset_sleep_cool": "Preset Notte — Raffrescamento",
+          "preset_sleep_heat": "Preset Notte — Riscaldamento",
+          "preset_comfort_cool": "Preset Comfort — Raffrescamento",
+          "preset_comfort_heat": "Preset Comfort — Riscaldamento"
+        }
+      }
+    },
+    "error": {
+      "invalid_temperature_range": "La temperatura target minima deve essere inferiore alla massima.",
+      "invalid_sensor_range": "Ogni valore minimo dei sensori deve essere inferiore al massimo.",
+      "invalid_dry_range": "L'umidità dry OFF deve essere inferiore a quella ON.",
+      "invalid_power_range": "La soglia di potenza OFF deve essere inferiore a quella ON."
+    }
+  },
+  "selector": {
+    "strategy": {
+      "options": {
+        "discrete_commands": "Comandi ON e OFF distinti",
+        "toggle_with_power_feedback": "Toggle con feedback da consumo dedicato"
+      }
+    },
+    "thermal_mode": {
+      "options": {
+        "cool": "Raffrescamento",
+        "heat": "Riscaldamento"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "diagnostics": {
+        "name": "Diagnostica"
+      },
+      "power_feedback_status": {
+        "name": "Stato feedback consumo"
+      }
+    }
+  }
+}

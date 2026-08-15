@@ -1,0 +1,13 @@
+{
+  "domain": "thermopilot",
+  "name": "ThermoPilot",
+  "after_dependencies": ["switch", "sensor"],
+  "codeowners": ["@issu-lab"],
+  "config_flow": true,
+  "documentation": "https://github.com/issu-lab/thermopilot",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/issu-lab/thermopilot/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

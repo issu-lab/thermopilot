@@ -1,0 +1,22 @@
+# Reference only. Production setup is performed through the Home Assistant UI.
+name: "Whole Home Thermostat"
+strategy: toggle_with_power_feedback
+modes: [cool, heat]
+temperature_sensors:
+  - sensor.living_area_temperature
+  - sensor.bedroom_temperature
+humidity_sensors:
+  - sensor.living_area_humidity
+  - sensor.bedroom_humidity
+pressure_sensors:
+  - sensor.indoor_pressure
+toggle_command: switch.air_conditioner_toggle_command
+power_sensor: sensor.air_conditioner_power
+power_off_below: 50
+power_on_above: 200
+power_stabilization: 30
+toggle_pulse_duration: 2
+feedback_timeout: 35
+maximum_attempts: 3
+startup_command_delay: 60
+notification_service: notify.mobile_app_phone
