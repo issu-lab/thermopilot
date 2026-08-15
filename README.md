@@ -1,10 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/thermopilot-banner-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/thermopilot-banner-light.png">
-  <img alt="ThermoPilot — unified climate control for Home Assistant" src="assets/thermopilot-banner-light.png" width="100%">
-</picture>
+<img alt="ThermoPilot — unified climate control for Home Assistant" src="assets/thermopilot-banner-dark.png" width="100%">
 
 [![Status](https://img.shields.io/badge/status-active%20development-F0B429?style=flat-square)](#project-status)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.8%2B-41BDF5?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
@@ -28,14 +24,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.1` |
+| **Current version** | `0.1.2` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.1 is the first complete implementation. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.1.2 is an initial testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 ---
 
@@ -47,6 +43,10 @@ ThermoPilot was created to replace two independent AppDaemon thermostats with on
 - **Power-feedback toggle** — one stateless command confirmed by measured power, including manual-operation detection and retries.
 
 The integration is configured from the Home Assistant UI. No AppDaemon instance, MQTT broker, YAML production configuration or external Python package is required.
+
+### Home Assistant Integration and Device
+
+ThermoPilot is installed and managed as a HACS custom integration. Each configured thermostat is represented as one Home Assistant device that groups its climate entity, diagnostic sensor and optional power-feedback status sensor. It therefore appears with regular integrations instead of dispersing its configuration among Home Assistant Helpers.
 
 ---
 
@@ -271,7 +271,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.1.
+NUT support is not implemented in version 0.1.2.
 
 ---
 
@@ -296,11 +296,7 @@ Released under the [MIT License](LICENSE).
 This project is part of the **iSSU Open Homelab ecosystem**.
 
 <a href="https://github.com/issu-lab/Open-Homelab">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/thermopilot-footer-light.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/thermopilot-footer-dark.png">
-    <img alt="Explore iSSU Open Homelab" src="assets/thermopilot-footer-dark.png" width="480">
-  </picture>
+  <img alt="Explore iSSU Open Homelab" src="assets/thermopilot-footer-dark.png" width="360">
 </a>
 
 </div>
