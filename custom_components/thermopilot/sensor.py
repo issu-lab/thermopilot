@@ -21,7 +21,7 @@ async def async_setup_entry(
     """Set up general and optional power-feedback diagnostics."""
     controller: ThermoPilotController = hass.data[DOMAIN][entry.entry_id]
     entities: list[SensorEntity] = [ThermoPilotDiagnosticSensor(controller, entry)]
-    if controller.strategy == STRATEGY_POWER_TOGGLE:
+    if controller.has_power_feedback:
         entities.append(ThermoPilotPowerStatusSensor(controller, entry))
     async_add_entities(entities)
 

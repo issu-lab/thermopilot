@@ -43,6 +43,7 @@ from .const import (
     OPT_POWER_OFF_BELOW,
     OPT_POWER_ON_ABOVE,
     OPT_POWER_STABILIZATION,
+    OPT_POWER_UNAVAILABLE_GRACE,
     OPT_PRESSURE_VALID_MAX,
     OPT_PRESSURE_VALID_MIN,
     OPT_RESTORE_OFF_ON_DELAY,
@@ -191,6 +192,7 @@ class ThermoPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 fields[vol.Required(CONF_HEAT_COMMAND)] = _entity_selector("switch")
             if self._data.get(CONF_ENABLE_DRY):
                 fields[vol.Required(CONF_DRY_COMMAND)] = _entity_selector("switch")
+            fields[vol.Optional(CONF_POWER_SENSOR)] = _entity_selector("sensor")
         else:
             fields[vol.Required(CONF_TOGGLE_COMMAND)] = _entity_selector("switch")
             fields[vol.Required(CONF_POWER_SENSOR)] = _entity_selector("sensor")
@@ -242,6 +244,8 @@ class ThermoPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 updated = {**current, **user_input}
                 if current[CONF_STRATEGY] != STRATEGY_DISCRETE:
                     updated[CONF_ENABLE_DRY] = False
+                elif not user_input.get(CONF_POWER_SENSOR):
+                    updated.pop(CONF_POWER_SENSOR, None)
                 return self.async_update_reload_and_abort(
                     entry, data_updates=updated
                 )
@@ -291,6 +295,12 @@ class ThermoPilotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             fields[cool_marker] = _entity_selector("switch")
             fields[heat_marker] = _entity_selector("switch")
             fields[dry_marker] = _entity_selector("switch")
+            power_marker = (
+                vol.Optional(CONF_POWER_SENSOR, default=current[CONF_POWER_SENSOR])
+                if CONF_POWER_SENSOR in current
+                else vol.Optional(CONF_POWER_SENSOR)
+            )
+            fields[power_marker] = _entity_selector("sensor")
         else:
             fields[vol.Required(
                 CONF_TOGGLE_COMMAND, default=current[CONF_TOGGLE_COMMAND]
@@ -324,9 +334,15 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_sensor_range"
             elif user_input[OPT_PRESSURE_VALID_MIN] >= user_input[OPT_PRESSURE_VALID_MAX]:
                 errors["base"] = "invalid_sensor_range"
-            elif user_input[OPT_DRY_OFF] >= user_input[OPT_DRY_ON]:
+            elif (
+                self.config_entry.data.get(CONF_ENABLE_DRY)
+                and user_input[OPT_DRY_OFF] >= user_input[OPT_DRY_ON]
+            ):
                 errors["base"] = "invalid_dry_range"
-            elif user_input[OPT_POWER_OFF_BELOW] >= user_input[OPT_POWER_ON_ABOVE]:
+            elif (
+                self.config_entry.data.get(CONF_POWER_SENSOR)
+                and user_input[OPT_POWER_OFF_BELOW] >= user_input[OPT_POWER_ON_ABOVE]
+            ):
                 errors["base"] = "invalid_power_range"
             else:
                 return self.async_create_entry(title="", data=user_input)
@@ -355,18 +371,22 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
                 }
             )
 
-        if self.config_entry.data[CONF_STRATEGY] == STRATEGY_POWER_TOGGLE:
+        if self.config_entry.data.get(CONF_POWER_SENSOR):
             fields.update(
                 {
                     vol.Required(OPT_POWER_OFF_BELOW, default=self._current(OPT_POWER_OFF_BELOW)): _number(0, 1000),
                     vol.Required(OPT_POWER_ON_ABOVE, default=self._current(OPT_POWER_ON_ABOVE)): _number(1, 5000),
                     vol.Required(OPT_POWER_STABILIZATION, default=self._current(OPT_POWER_STABILIZATION)): _number(0, 300, 1),
-                    vol.Required(OPT_TOGGLE_PULSE, default=self._current(OPT_TOGGLE_PULSE)): _number(0.1, 30, 0.1),
+                    vol.Required(OPT_POWER_UNAVAILABLE_GRACE, default=self._current(OPT_POWER_UNAVAILABLE_GRACE)): _number(30, 900, 1),
                     vol.Required(OPT_FEEDBACK_TIMEOUT, default=self._current(OPT_FEEDBACK_TIMEOUT)): _number(1, 300, 1),
                     vol.Required(OPT_MAX_ATTEMPTS, default=self._current(OPT_MAX_ATTEMPTS)): _number(1, 10, 1),
                     vol.Optional(OPT_NOTIFICATION_SERVICE, default=self._current(OPT_NOTIFICATION_SERVICE)): selector.TextSelector(),
                 }
             )
+            if self.config_entry.data[CONF_STRATEGY] == STRATEGY_POWER_TOGGLE:
+                fields[vol.Required(
+                    OPT_TOGGLE_PULSE, default=self._current(OPT_TOGGLE_PULSE)
+                )] = _number(0.1, 30, 0.1)
 
         for preset in PRESETS:
             for mode in self.config_entry.data[CONF_MODES]:

@@ -45,6 +45,13 @@ class PackageTests(unittest.TestCase):
         self.assertIn("Reference only", discrete)
         self.assertIn("Reference only", power_feedback)
 
+    def test_discrete_setup_supports_optional_power_feedback(self):
+        flow = (INTEGRATION / "config_flow.py").read_text()
+        self.assertIn(
+            'fields[vol.Optional(CONF_POWER_SENSOR)] = _entity_selector("sensor")',
+            flow,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
