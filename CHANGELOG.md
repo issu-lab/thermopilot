@@ -4,6 +4,16 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-08-15
+
+### Changed
+
+- Exposed the README banner and footer with the same HACS-compatible markup used by ThermoMatrix.
+- Separated discrete command selection from optional dedicated power feedback.
+- Added confirmed discrete-command recovery with alternating commands and three attempts.
+- Added a deliberate unavailable initialization state and power-sensor outage handling.
+- Added outage and recovery notifications when a notification service is configured.
+
 ## [0.1.2] - 2026-08-15
 
 ### Changed

@@ -29,7 +29,7 @@
       },
       "hardware": {
         "title": "Select hardware commands",
-        "description": "Momentary switches are treated as commands, never as physical feedback.",
+        "description": "Select the command entities. A dedicated power sensor is optional with discrete ON/OFF commands and required with a stateless toggle.",
         "data": {
           "cool_command": "Cool command",
           "heat_command": "Heat command",
@@ -90,6 +90,7 @@
           "power_off_below": "Power below which the device is off",
           "power_on_above": "Power above which the device is on",
           "power_stabilization": "Manual power-change stabilization",
+          "power_unavailable_grace": "Power sensor unavailable grace period",
           "toggle_pulse_duration": "Toggle pulse duration",
           "feedback_timeout": "Power feedback timeout",
           "maximum_attempts": "Maximum command attempts",

@@ -1,6 +1,6 @@
-<div align="center">
+![ThermoPilot](assets/thermopilot-banner-light.png)
 
-<img alt="ThermoPilot — unified climate control for Home Assistant" src="assets/thermopilot-banner-dark.png" width="100%">
+<div align="center">
 
 [![Status](https://img.shields.io/badge/status-active%20development-F0B429?style=flat-square)](#project-status)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.8%2B-41BDF5?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
@@ -24,14 +24,17 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.2` |
+| **Current version** | `0.1.3` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.2 is an initial testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.1.3 is an initial testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+
+> [!IMPORTANT]
+> ThermoPilot intentionally remains unavailable during its default 60-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
 
 ---
 
@@ -271,7 +274,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.2.
+NUT support is not implemented in version 0.1.3.
 
 ---
 
@@ -296,7 +299,9 @@ Released under the [MIT License](LICENSE).
 This project is part of the **iSSU Open Homelab ecosystem**.
 
 <a href="https://github.com/issu-lab/Open-Homelab">
-  <img alt="Explore iSSU Open Homelab" src="assets/thermopilot-footer-dark.png" width="360">
+  <img src="assets/issu-open-homelab-badge.png"
+       alt="Explore iSSU Open Homelab"
+       width="480">
 </a>
 
 </div>

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "thermopilot"
-INTEGRATION_VERSION: Final = "0.1.2"
+INTEGRATION_VERSION: Final = "0.1.3"
 PLATFORMS: Final = ["climate", "sensor"]
 STORAGE_VERSION: Final = 1
 
@@ -53,6 +53,7 @@ OPT_TOGGLE_PULSE: Final = "toggle_pulse_duration"
 OPT_FEEDBACK_TIMEOUT: Final = "feedback_timeout"
 OPT_MAX_ATTEMPTS: Final = "maximum_attempts"
 OPT_NOTIFICATION_SERVICE: Final = "notification_service"
+OPT_POWER_UNAVAILABLE_GRACE: Final = "power_unavailable_grace"
 
 PRESET_HOME: Final = "home"
 PRESET_AWAY: Final = "away"
@@ -81,8 +82,9 @@ DEFAULTS: Final = {
     OPT_POWER_ON_ABOVE: 200.0,
     OPT_POWER_STABILIZATION: 30,
     OPT_TOGGLE_PULSE: 2,
-    OPT_FEEDBACK_TIMEOUT: 35,
+    OPT_FEEDBACK_TIMEOUT: 60,
     OPT_MAX_ATTEMPTS: 3,
+    OPT_POWER_UNAVAILABLE_GRACE: 180,
     OPT_NOTIFICATION_SERVICE: "",
     "preset_home_cool": 26.0,
     "preset_home_heat": 21.0,

@@ -46,6 +46,7 @@ from .const import (
     OPT_POWER_OFF_BELOW,
     OPT_POWER_ON_ABOVE,
     OPT_POWER_STABILIZATION,
+    OPT_POWER_UNAVAILABLE_GRACE,
     OPT_PRESSURE_VALID_MAX,
     OPT_PRESSURE_VALID_MIN,
     OPT_RESTORE_OFF_ON_DELAY,
@@ -105,6 +106,9 @@ class ThermoPilotController:
         self._command_pending = False
         self._power_debounce_cancel: Callable[[], None] | None = None
         self._last_power_classification = "unknown"
+        self._initialized = False
+        self._power_unavailable_cancel: Callable[[], None] | None = None
+        self._power_outage_notified = False
 
     def option(self, key: str):
         """Return a configured advanced option or its default."""
@@ -117,6 +121,10 @@ class ThermoPilotController:
         if self.data.get(CONF_ENABLE_DRY):
             modes.append(MODE_DRY)
         return modes
+
+    @property
+    def has_power_feedback(self) -> bool:
+        return bool(self.data.get(CONF_POWER_SENSOR))
 
     @property
     def target_temperature(self) -> float | None:
@@ -159,7 +167,9 @@ class ThermoPilotController:
                     self.hass, environment_entities, self._environment_changed
                 )
             )
-        if self.strategy == STRATEGY_POWER_TOGGLE:
+        self.available = False
+        self.last_command_result = "initializing"
+        if self.has_power_feedback:
             self._last_power_classification = self.power_classification
             self._listeners.append(
                 async_track_state_change_event(
@@ -178,6 +188,9 @@ class ThermoPilotController:
         if self._power_debounce_cancel:
             self._power_debounce_cancel()
             self._power_debounce_cancel = None
+        if self._power_unavailable_cancel:
+            self._power_unavailable_cancel()
+            self._power_unavailable_cancel = None
         for remove in self._listeners:
             remove()
         self._listeners.clear()
@@ -270,6 +283,28 @@ class ThermoPilotController:
     @callback
     def _power_changed(self, event: Event) -> None:
         classification = self.power_classification
+        if classification == "unknown":
+            self.last_error = "power_sensor_degraded"
+            self.commands_blocked = True
+            if self._initialized and not self._power_unavailable_cancel:
+                self._power_unavailable_cancel = async_call_later(
+                    self.hass,
+                    float(self.option(OPT_POWER_UNAVAILABLE_GRACE)),
+                    self._async_power_unavailable,
+                )
+            self._notify_update()
+            return
+        if self._power_unavailable_cancel:
+            self._power_unavailable_cancel()
+            self._power_unavailable_cancel = None
+        was_unavailable = not self.available
+        self.available = self._initialized
+        self.commands_blocked = not self._initialized
+        self.last_error = None
+        if was_unavailable and self._power_outage_notified:
+            self._create_task(self._async_notify_power_restored())
+        if self._initialized:
+            self._create_task(self._async_reconcile_after_power_return())
         if classification == self._last_power_classification:
             return
         self._last_power_classification = classification
@@ -285,9 +320,12 @@ class ThermoPilotController:
 
     async def _async_finish_startup(self) -> None:
         await asyncio.sleep(float(self.option(OPT_STARTUP_DELAY)))
+        self._initialized = True
+        self.available = True
         self.commands_blocked = False
         if (
             self.strategy == STRATEGY_DISCRETE
+            and not self.has_power_feedback
             and self.state.physical_on
             and self.state.hvac_mode != MODE_OFF
         ):
@@ -295,8 +333,19 @@ class ThermoPilotController:
             await self._async_discrete_command(saved_mode, False, force=True)
             await asyncio.sleep(float(self.option(OPT_RESTORE_OFF_ON_DELAY)))
             await self._async_discrete_command(saved_mode, True, force=True)
-        elif self.strategy == STRATEGY_POWER_TOGGLE:
+        elif self.has_power_feedback:
+            if self.power_classification == "unknown":
+                self.commands_blocked = True
+                self.last_error = "power_sensor_degraded"
+                self._power_unavailable_cancel = async_call_later(
+                    self.hass,
+                    float(self.option(OPT_POWER_UNAVAILABLE_GRACE)),
+                    self._async_power_unavailable,
+                )
+                self._notify_update()
+                return
             await self._async_adopt_power_at_startup()
+            await self._async_reconcile_after_power_return()
         await self.async_evaluate()
 
     async def _async_adopt_power_at_startup(self) -> None:
@@ -325,7 +374,7 @@ class ThermoPilotController:
 
     @property
     def power(self) -> float | None:
-        if self.strategy != STRATEGY_POWER_TOGGLE:
+        if not self.has_power_feedback:
             return None
         state = self.hass.states.get(self.data[CONF_POWER_SENSOR])
         try:
@@ -358,6 +407,11 @@ class ThermoPilotController:
             self.state.last_thermal_mode = mode
         self.hvac_action = "off" if mode == MODE_OFF else "idle"
         await self._save()
+        if mode != MODE_OFF and not self.state.physical_on:
+            await self._async_set_physical(True)
+            self.hvac_action = "idle"
+            self._notify_update()
+            return
         await self.async_evaluate()
 
     async def async_set_temperature(self, temperature: float) -> None:
@@ -450,7 +504,11 @@ class ThermoPilotController:
                     self.state.physical_mode or self._settings_mode()
                 )
                 if self.strategy == STRATEGY_DISCRETE:
-                    success = await self._async_discrete_command(mode, turn_on)
+                    success = (
+                        await self._async_confirmed_discrete_command(mode, turn_on)
+                        if self.has_power_feedback
+                        else await self._async_discrete_command(mode, turn_on)
+                    )
                 else:
                     success = await self._async_toggle_command(turn_on)
                 if success:
@@ -491,6 +549,24 @@ class ThermoPilotController:
             self.last_command_result = f"startup_{service}"
             await self._save()
         return True
+
+    async def _async_confirmed_discrete_command(
+        self, mode: str, turn_on: bool
+    ) -> bool:
+        """Send explicit commands and recover by alternating the physical state."""
+        attempts = int(self.option(OPT_MAX_ATTEMPTS))
+        for attempt in range(1, attempts + 1):
+            await self._async_discrete_command(mode, turn_on)
+            await asyncio.sleep(float(self.option(OPT_FEEDBACK_TIMEOUT)))
+            if self._toggle_target_reached(turn_on):
+                self.last_command_result = f"confirmed_attempt_{attempt}"
+                return True
+            await self._async_discrete_command(mode, not turn_on)
+            await asyncio.sleep(float(self.option(OPT_FEEDBACK_TIMEOUT)))
+        self.last_command_result = "failed"
+        self.last_error = "power_feedback_not_reached"
+        await self._async_notify_failure(turn_on, attempts)
+        return False
 
     async def _async_toggle_command(self, turn_on: bool) -> bool:
         attempts = int(self.option(OPT_MAX_ATTEMPTS))
@@ -544,6 +620,62 @@ class ThermoPilotController:
             },
             blocking=False,
         )
+
+    async def _async_power_unavailable(self, now) -> None:
+        self._power_unavailable_cancel = None
+        if self.power_classification != "unknown":
+            return
+        self.available = False
+        self.commands_blocked = True
+        self.last_error = "power_sensor_unavailable"
+        self.last_command_result = "feedback_unavailable"
+        configured = str(self.option(OPT_NOTIFICATION_SERVICE)).strip()
+        if configured and "." in configured and not self._power_outage_notified:
+            domain, service = configured.split(".", 1)
+            await self.hass.services.async_call(
+                domain,
+                service,
+                {
+                    "title": "⚠️ ThermoPilot unavailable",
+                    "message": (
+                        f"{self.entry.title}: the dedicated power sensor has been "
+                        "unavailable for more than 3 minutes. Hardware commands are blocked."
+                    ),
+                },
+                blocking=False,
+            )
+            self._power_outage_notified = True
+        self._notify_update()
+
+    async def _async_notify_power_restored(self) -> None:
+        configured = str(self.option(OPT_NOTIFICATION_SERVICE)).strip()
+        if configured and "." in configured and self._power_outage_notified:
+            domain, service = configured.split(".", 1)
+            await self.hass.services.async_call(
+                domain,
+                service,
+                {
+                    "title": "✅ ThermoPilot restored",
+                    "message": (
+                        f"{self.entry.title}: the dedicated power sensor is available "
+                        "again. ThermoPilot is online and state reconciliation has started."
+                    ),
+                },
+                blocking=False,
+            )
+        self._power_outage_notified = False
+
+    async def _async_reconcile_after_power_return(self) -> None:
+        if not self._initialized or self.power_classification == "unknown":
+            return
+        requested_on = self.state.hvac_mode != MODE_OFF
+        physical_on = self.power_classification in {"starting", "on"}
+        self.state.physical_on = physical_on
+        if requested_on != physical_on:
+            await self._async_set_physical(requested_on)
+        else:
+            await self._save()
+        self._notify_update()
 
     async def _async_reconcile_manual_power(self, now) -> None:
         self._power_debounce_cancel = None

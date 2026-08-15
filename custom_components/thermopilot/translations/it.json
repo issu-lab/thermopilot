@@ -29,7 +29,7 @@
       },
       "hardware": {
         "title": "Seleziona i comandi hardware",
-        "description": "Gli switch momentanei sono trattati come comandi e mai come feedback fisico.",
+        "description": "Seleziona i comandi. Il sensore di consumo dedicato è opzionale con comandi ON/OFF distinti e obbligatorio con un toggle senza stato.",
         "data": {
           "cool_command": "Comando raffrescamento",
           "heat_command": "Comando riscaldamento",
@@ -90,6 +90,7 @@
           "power_off_below": "Potenza sotto la quale il dispositivo è spento",
           "power_on_above": "Potenza sopra la quale il dispositivo è acceso",
           "power_stabilization": "Stabilizzazione variazione manuale consumo",
+          "power_unavailable_grace": "Tolleranza indisponibilità sensore di consumo",
           "toggle_pulse_duration": "Durata impulso toggle",
           "feedback_timeout": "Timeout feedback consumo",
           "maximum_attempts": "Numero massimo di tentativi",
