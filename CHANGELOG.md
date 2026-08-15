@@ -4,6 +4,16 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-08-15
+
+### Changed
+
+- Classified each ThermoPilot configuration as a Home Assistant device so its entities remain grouped with regular integrations.
+- Replaced the Home Assistant brand icon with the approved two-arc iSSU signal mark.
+- Restored the approved project banner, footer and social-preview artwork without altering their established branding.
+- Replaced theme-dependent README picture blocks with direct images compatible with the HACS renderer.
+- Reduced the displayed footer size.
+
 ## [0.1.1] - 2026-08-15
 
 ### Added
