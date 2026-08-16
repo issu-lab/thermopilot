@@ -4,6 +4,16 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-08-16
+
+### Fixed
+
+- Sent physical ON/OFF commands immediately without holding the Home Assistant service call open during power confirmation.
+- Published target, mode and action updates before background feedback verification completes.
+- Replaced fixed feedback sleeps with sensor-event-driven confirmation while retaining the configured timeout as an upper bound.
+- Allowed newer physical requests, especially OFF, to cancel obsolete pending confirmations and run immediately.
+- Kept alternating recovery attempts serialized without blocking thermostat evaluation or dashboard controls.
+
 ## [0.1.4] - 2026-08-16
 
 ### Fixed

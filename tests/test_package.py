@@ -127,6 +127,30 @@ class PackageTests(unittest.TestCase):
         self.assertIn("reconciliation_succeeded", controller)
         self.assertIn("ThermoPilot recovery failed", controller)
 
+    def test_power_feedback_is_event_driven_and_non_blocking(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        self.assertIn("_power_feedback_event = asyncio.Event()", controller)
+        self.assertIn("self._power_feedback_event.set()", controller)
+        self.assertIn("asyncio.wait_for", controller)
+        self.assertIn("_async_confirm_physical_state", controller)
+        start = controller.index("    async def _async_confirm_physical_state")
+        end = controller.index("    def _toggle_target_reached", start)
+        self.assertNotIn("asyncio.sleep", controller[start:end])
+
+    def test_new_physical_request_preempts_pending_confirmation(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        self.assertIn("_confirmation_generation", controller)
+        self.assertIn("_cancel_pending_confirmation", controller)
+        self.assertIn("self._confirmation_task.cancel()", controller)
+
+    def test_target_and_mode_are_published_before_feedback_confirmation(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        for method_name in ("async_set_hvac_mode", "async_set_temperature"):
+            start = controller.index(f"    async def {method_name}")
+            end = controller.find("\n    async def ", start + 10)
+            method = controller[start:end]
+            self.assertIn("self._notify_update()", method)
+
 
 if __name__ == "__main__":
     unittest.main()

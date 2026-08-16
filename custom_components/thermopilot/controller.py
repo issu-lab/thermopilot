@@ -106,6 +106,9 @@ class ThermoPilotController:
         self._command_lock = asyncio.Lock()
         self._evaluation_lock = asyncio.Lock()
         self._command_pending = False
+        self._confirmation_task: asyncio.Task | None = None
+        self._confirmation_generation = 0
+        self._power_feedback_event = asyncio.Event()
         self._environment_evaluation_cancel: Callable[[], None] | None = None
         self._power_debounce_cancel: Callable[[], None] | None = None
         self._last_power_classification = "unknown"
@@ -300,6 +303,7 @@ class ThermoPilotController:
 
     @callback
     def _power_changed(self, event: Event) -> None:
+        self._power_feedback_event.set()
         classification = self.power_classification
         if classification == "unknown":
             self.last_error = "power_sensor_degraded"
@@ -428,14 +432,16 @@ class ThermoPilotController:
             mode == MODE_OFF and self.state.physical_on
         ):
             return
-        if self.state.physical_on:
-            await self._async_set_physical(False)
+        physical_was_on = self.state.physical_on
         self.state.hvac_mode = mode
         self.manual_mode_unknown = False
         if mode in self.state.modes:
             self.state.last_thermal_mode = mode
         self.hvac_action = "off" if mode == MODE_OFF else "idle"
         await self._save()
+        self._notify_update()
+        if physical_was_on:
+            await self._async_set_physical(False)
         await self.async_evaluate()
 
     async def async_turn_on(self) -> None:
@@ -456,6 +462,7 @@ class ThermoPilotController:
         self.state.modes[mode].target = target
         self.state.modes[mode].preset = PRESET_NONE
         await self._save()
+        self._notify_update()
         await self.async_evaluate()
 
     async def async_set_preset(self, preset: str) -> None:
@@ -468,6 +475,7 @@ class ThermoPilotController:
             mode = self._settings_mode()
             self.state.modes[mode].preset = PRESET_NONE
             await self._save()
+            self._notify_update()
             await self.async_evaluate()
             return
         if preset not in PRESETS:
@@ -476,6 +484,7 @@ class ThermoPilotController:
         self.state.modes[mode].target = self.preset_values(preset, mode)
         self.state.modes[mode].preset = preset
         await self._save()
+        self._notify_update()
         await self.async_evaluate()
 
     async def async_evaluate(self) -> None:
@@ -545,30 +554,69 @@ class ThermoPilotController:
         if self.commands_blocked:
             return False
         async with self._command_lock:
-            self._command_pending = True
-            try:
-                mode = self.state.hvac_mode if turn_on else (
-                    self.state.physical_mode or self._settings_mode()
-                )
-                if self.strategy == STRATEGY_DISCRETE:
-                    success = (
-                        await self._async_confirmed_discrete_command(mode, turn_on)
-                        if self.has_power_feedback
-                        else await self._async_discrete_command(mode, turn_on)
-                    )
-                else:
-                    success = await self._async_toggle_command(turn_on)
-                if success:
-                    self.state.physical_on = turn_on
-                    self.state.physical_mode = mode if turn_on else None
-                    self.state.last_command_at = dt_util.utcnow().isoformat()
-                    self.last_command_result = "on" if turn_on else "off"
-                    self.last_error = None
-                    await self._save()
-                return success
-            finally:
-                self._command_pending = False
+            mode = self.state.hvac_mode if turn_on else (
+                self.state.physical_mode or self._settings_mode()
+            )
+            had_pending_confirmation = bool(
+                self._confirmation_task and not self._confirmation_task.done()
+            )
+            self._cancel_pending_confirmation()
+            generation = self._confirmation_generation
+
+            if (
+                self.has_power_feedback
+                and not had_pending_confirmation
+                and self._toggle_target_reached(turn_on)
+            ):
+                self.state.physical_on = turn_on
+                self.state.physical_mode = mode if turn_on else None
+                self.last_command_result = "already_confirmed"
+                self.last_error = None
+                await self._save()
                 self._notify_update()
+                return True
+
+            await self._async_issue_physical_command(mode, turn_on)
+            self.state.physical_on = turn_on
+            self.state.physical_mode = mode if turn_on else None
+            self.state.last_command_at = dt_util.utcnow().isoformat()
+            self.last_error = None
+
+            if not self.has_power_feedback:
+                self.last_command_result = "on" if turn_on else "off"
+                await self._save()
+                self._notify_update()
+                return True
+
+            self._command_pending = True
+            self.last_command_result = (
+                "on_sent_waiting_feedback"
+                if turn_on
+                else "off_sent_waiting_feedback"
+            )
+            await self._save()
+            self._notify_update()
+            self._confirmation_task = self._create_task(
+                self._async_confirm_physical_state(mode, turn_on, generation)
+            )
+            return True
+
+    def _cancel_pending_confirmation(self) -> None:
+        """Cancel an obsolete feedback wait before issuing a newer command."""
+        self._confirmation_generation += 1
+        if self._confirmation_task and not self._confirmation_task.done():
+            self._confirmation_task.cancel()
+        self._confirmation_task = None
+        self._command_pending = False
+
+    async def _async_issue_physical_command(
+        self, mode: str, turn_on: bool
+    ) -> None:
+        """Issue one hardware command immediately without waiting for feedback."""
+        if self.strategy == STRATEGY_DISCRETE:
+            await self._async_discrete_command(mode, turn_on)
+            return
+        await self._async_toggle_pulse()
 
     def _discrete_entity(self, mode: str) -> str:
         mapping = {
@@ -597,50 +645,91 @@ class ThermoPilotController:
             await self._save()
         return True
 
-    async def _async_confirmed_discrete_command(
-        self, mode: str, turn_on: bool
-    ) -> bool:
-        """Send explicit commands and recover by alternating the physical state."""
-        attempts = int(self.option(OPT_MAX_ATTEMPTS))
-        for attempt in range(1, attempts + 1):
-            await self._async_discrete_command(mode, turn_on)
-            await asyncio.sleep(float(self.option(OPT_FEEDBACK_TIMEOUT)))
-            if self._toggle_target_reached(turn_on):
-                self.last_command_result = f"confirmed_attempt_{attempt}"
-                return True
-            await self._async_discrete_command(mode, not turn_on)
-            await asyncio.sleep(float(self.option(OPT_FEEDBACK_TIMEOUT)))
-        self.last_command_result = "failed"
-        self.last_error = "power_feedback_not_reached"
-        await self._async_notify_failure(turn_on, attempts)
-        return False
-
-    async def _async_toggle_command(self, turn_on: bool) -> bool:
-        attempts = int(self.option(OPT_MAX_ATTEMPTS))
-        for attempt in range(1, attempts + 1):
-            if self._toggle_target_reached(turn_on):
-                return True
-            await self.hass.services.async_call(
-                "switch",
-                "turn_on",
-                {"entity_id": self.data[CONF_TOGGLE_COMMAND]},
-                blocking=True,
-            )
+    async def _async_toggle_pulse(self) -> None:
+        await self.hass.services.async_call(
+            "switch",
+            "turn_on",
+            {"entity_id": self.data[CONF_TOGGLE_COMMAND]},
+            blocking=True,
+        )
+        try:
             await asyncio.sleep(float(self.option(OPT_TOGGLE_PULSE)))
-            await self.hass.services.async_call(
-                "switch",
-                "turn_off",
-                {"entity_id": self.data[CONF_TOGGLE_COMMAND]},
-                blocking=True,
+        finally:
+            await asyncio.shield(
+                self.hass.services.async_call(
+                    "switch",
+                    "turn_off",
+                    {"entity_id": self.data[CONF_TOGGLE_COMMAND]},
+                    blocking=True,
+                )
             )
-            await asyncio.sleep(float(self.option(OPT_FEEDBACK_TIMEOUT)))
+
+    async def _async_wait_for_power_target(
+        self, turn_on: bool, timeout: float
+    ) -> bool:
+        """Wake on power updates and use timeout only as the upper bound."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while not self._toggle_target_reached(turn_on):
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return False
+            self._power_feedback_event.clear()
             if self._toggle_target_reached(turn_on):
-                self.last_command_result = f"confirmed_attempt_{attempt}"
                 return True
-        self.last_command_result = "failed"
-        self.last_error = "power_feedback_not_reached"
-        await self._async_notify_failure(turn_on, attempts)
-        return False
+            try:
+                await asyncio.wait_for(
+                    self._power_feedback_event.wait(), timeout=remaining
+                )
+            except TimeoutError:
+                return self._toggle_target_reached(turn_on)
+        return True
+
+    async def _async_confirm_physical_state(
+        self, mode: str, turn_on: bool, generation: int
+    ) -> bool:
+        """Confirm in the background and recover without blocking HA services."""
+        attempts = int(self.option(OPT_MAX_ATTEMPTS))
+        timeout = float(self.option(OPT_FEEDBACK_TIMEOUT))
+        try:
+            for attempt in range(1, attempts + 1):
+                if await self._async_wait_for_power_target(turn_on, timeout):
+                    if generation != self._confirmation_generation:
+                        return False
+                    self.state.physical_on = turn_on
+                    self.state.physical_mode = mode if turn_on else None
+                    self.last_command_result = f"confirmed_attempt_{attempt}"
+                    self.last_error = None
+                    await self._save()
+                    self._notify_update()
+                    return True
+                if attempt >= attempts or generation != self._confirmation_generation:
+                    break
+                async with self._command_lock:
+                    await self._async_issue_physical_command(mode, not turn_on)
+                await self._async_wait_for_power_target(not turn_on, timeout)
+                if generation != self._confirmation_generation:
+                    return False
+                async with self._command_lock:
+                    await self._async_issue_physical_command(mode, turn_on)
+
+            if generation == self._confirmation_generation:
+                observed_on = self.power_classification in {"starting", "on"}
+                self.state.physical_on = observed_on
+                self.state.physical_mode = mode if observed_on else None
+                self.last_command_result = "failed"
+                self.last_error = "power_feedback_not_reached"
+                await self._save()
+                await self._async_notify_failure(turn_on, attempts)
+                self._notify_update()
+            return False
+        except asyncio.CancelledError:
+            return False
+        finally:
+            if generation == self._confirmation_generation:
+                self._command_pending = False
+                self._confirmation_task = None
+                self._notify_update()
 
     def _toggle_target_reached(self, turn_on: bool) -> bool:
         return power_target_reached(self.power_classification, turn_on)
@@ -738,6 +827,9 @@ class ThermoPilotController:
         self.state.physical_mode = self._settings_mode() if physical_on else None
         await self._save()
         await self.async_evaluate()
+        confirmation_task = self._confirmation_task
+        if confirmation_task:
+            return await confirmation_task
         return self.last_error is None and self.power_classification != "unknown"
 
     async def _async_reconcile_manual_power(self, now) -> None:

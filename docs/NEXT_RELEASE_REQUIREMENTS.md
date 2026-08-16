@@ -1,6 +1,15 @@
 # Next Release Requirements
 
-This document records the behavior incorporated into `0.1.4`. Local automated validation is complete; field validation remains required before the release is considered production-ready.
+This document records the behavior incorporated through `0.1.5`. Local automated validation is complete; field validation remains required before the release is considered production-ready.
+
+## Non-blocking power confirmation
+
+- Send the requested physical command immediately when the thermostat decision changes.
+- Publish target, mode and action without waiting for power confirmation.
+- Treat the feedback timeout as a maximum only and wake immediately on power-sensor state changes.
+- Keep Home Assistant service calls and thermostat evaluation responsive while confirmation runs in the background.
+- Cancel an obsolete pending confirmation when a newer physical request arrives; issue the newer command immediately.
+- Preserve alternating recovery and maximum-attempt behavior after a genuine confirmation timeout.
 
 ## README compatibility
 

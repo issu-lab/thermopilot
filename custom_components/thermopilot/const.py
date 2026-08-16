@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "thermopilot"
-INTEGRATION_VERSION: Final = "0.1.4"
+INTEGRATION_VERSION: Final = "0.1.5"
 PLATFORMS: Final = ["climate", "sensor"]
 STORAGE_VERSION: Final = 1
 

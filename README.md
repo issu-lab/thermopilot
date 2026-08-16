@@ -24,14 +24,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.4` |
+| **Current version** | `0.1.5` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.4 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.1.5 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 > [!IMPORTANT]
 > ThermoPilot intentionally remains unavailable during its default 15-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
@@ -208,7 +208,9 @@ This strategy uses validated three-state power thresholds:
 | 50-200 W | Starting |
 | Above 200 W | On |
 
-Crossing 50 W confirms an ON command. An OFF command is confirmed only below 50 W; the 50-200 W starting range never confirms OFF. Defaults use a two-second pulse, a 60-second feedback timeout and at most three attempts.
+Crossing 50 W confirms an ON command. An OFF command is confirmed only below 50 W; the 50-200 W starting range never confirms OFF. Defaults use a two-second pulse, a 60-second maximum feedback timeout and at most three attempts.
+
+Hardware commands are sent immediately. Power confirmation runs in the background and wakes as soon as the sensor reports the requested state; the timeout is only an upper bound. Target, mode and action remain responsive while confirmation is pending. A newer ON/OFF request cancels the obsolete confirmation and is issued immediately.
 
 Dedicated power feedback is independent of the command strategy. It can also validate discrete ON/OFF commands. In every profile it confirms physical state and detects manual operation; it does not replace the thermal decision.
 
@@ -283,7 +285,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.4.
+NUT support is not implemented in version 0.1.5.
 
 ---
 
