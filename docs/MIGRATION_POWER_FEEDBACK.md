@@ -19,7 +19,7 @@
 7. Select the entities documented in `examples/power-feedback-profile.yaml`.
 8. Confirm that the entity is created as `climate.whole_home_thermostat`; rename it before continuing if necessary.
 9. Add the optional notification action in advanced settings.
-10. Wait through the 60-second command guard.
+10. Wait through the 15-second command guard.
 11. Confirm adoption of an already-running device from power feedback.
 12. Validate one natural cool ON/OFF cycle.
 13. Validate one natural heat ON/OFF cycle when seasonally appropriate.

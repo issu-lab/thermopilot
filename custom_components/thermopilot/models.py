@@ -76,6 +76,13 @@ def classify_power(power: object, off_below: float, on_above: float) -> str:
     return "on"
 
 
+def power_target_reached(classification: str, turn_on: bool) -> bool:
+    """Return whether measured power confirms the requested physical state."""
+    if turn_on:
+        return classification in {"starting", "on"}
+    return classification == "off"
+
+
 @dataclass
 class ModeState:
     """Persisted settings for one thermal mode."""

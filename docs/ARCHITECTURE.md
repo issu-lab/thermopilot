@@ -33,9 +33,13 @@ This distinction prevents an active climate mode in `idle` from being mistaken f
 
 - No physical command is sent during the startup guard.
 - Invalid or missing temperature suspends automatic heat/cool commands.
+- Selecting a logical thermal mode never forces a physical ON command.
+- Heat/cool commands are derived only from the aggregated perceived temperature and hysteresis.
+- Environment-source updates are coalesced and thermostat evaluations are serialized.
 - Missing humidity suspends dry commands.
 - Only one physical command transaction runs at a time.
 - Power-feedback retries always re-read power before pulsing the toggle.
+- Power changes observed during command confirmation never start a parallel reconciliation.
 - Ambiguous manual power activation never selects a mode automatically.
 - Persistent writes use Home Assistant's versioned storage helper.
 - Unloading the integration cancels timers and listeners before final persistence.

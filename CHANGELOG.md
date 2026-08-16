@@ -6,9 +6,19 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Made logical Cool/Heat activation evaluate hysteresis instead of forcing physical ON.
+- Coalesced environment updates and serialized thermostat evaluation to prevent duplicate commands.
+- Prevented power updates during command confirmation from starting parallel reconciliation.
+- Corrected OFF confirmation to require the measured `off` power class below 50 W.
+- Added native Home Assistant `climate.turn_on` and `climate.turn_off` support.
+- Added selectable `none`/Manual preset behavior without changing the current target.
+- Reduced and clamped the initialization guard to 10-15 seconds, with a 15-second default.
+- Reported `initializing` throughout the startup guard and `online` for normal diagnostic status.
+
 ### Planned
 
-- Report `initializing` throughout the startup guard and use `online` instead of `ok` for normal diagnostic status.
 - Fix HACS rendering of the footer and License badge by replacing their unresolved relative URLs with absolute GitHub URLs.
 - Expand the README project motivation around unified Broadlink and similar IR/RF thermostat control, while documenting compatibility with any suitable Home Assistant switch entities.
 

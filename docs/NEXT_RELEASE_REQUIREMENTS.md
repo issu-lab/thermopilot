@@ -40,14 +40,15 @@ This document records approved behavior for the release following `0.1.2`. It is
 - Detect manual ON/OFF changes when dedicated power feedback is configured.
 - Infer a manually selected thermal mode from temperature, target and hysteresis; retain `unknown` when inference is ambiguous.
 - Treat the last saved logical mode as authoritative after restart.
-- If the saved mode is thermal and feedback reports OFF, restore that saved mode even when the current temperature would leave the physical thermostat idle.
+- If the saved mode is thermal and feedback reports OFF, keep the logical mode active but send ON only when the current temperature and hysteresis request physical operation.
 - If the saved mode is OFF, keep the device off.
 - Automatically reconcile saved and physical state when valid feedback becomes available.
 
 ## Initialization guard
 
-- Keep the climate entity `unavailable` during the configurable 60-second initialization period.
+- Keep the climate entity `unavailable` during the configurable 15-second initialization period by default.
 - Discard commands received during initialization; do not queue them.
+- Allow the initialization guard to be configured between 10 and 15 seconds; use 15 seconds as the safe default.
 - Preserve saved mode, target and preset.
 - Publish an `initializing` diagnostic state with a clear warning not to operate ThermoPilot until it is online.
 - Add a prominent README warning explaining that this guard is intentional and required for correct state synchronization.
@@ -79,7 +80,30 @@ This document records approved behavior for the release following `0.1.2`. It is
   - Message: `<thermostat name>: power feedback is available again, but the requested physical state could not be restored after 3 recovery cycles.`
 - Send these as normal, non-critical notifications. Keep diagnostic details on the diagnostic entity rather than expanding the user-facing message.
 
-## Initial activation correction
+## Thermostat-owned physical demand
 
-- Selecting a thermal mode must activate the physical thermostat even when current conditions imply `idle`; the physical thermostat remains responsible for compressor demand.
+- Selecting a thermal mode activates only the logical thermostat.
+- The physical ON command must be sent only when the aggregated perceived temperature crosses the configured heat/cool hysteresis boundary.
+- A selected thermal mode with no current demand must remain `idle` without sending a hardware command.
+- This behavior is authoritative for command profiles both with and without dedicated power feedback.
+- Power feedback validates physical state and detects manual operation; it must never replace the thermostat's thermal decision.
 - Verify this behavior from ThermoMatrix, native Home Assistant climate controls and the device page.
+
+## Aggregated environment input
+
+- Temperature, humidity and pressure entities feed one aggregated perceived-temperature input.
+- Invalid, unknown, unavailable and non-numeric source values are ignored according to the configured validity ranges.
+- Only the aggregated perceived-temperature update may trigger the heat/cool decision.
+- Coalesce source updates arriving together and serialize evaluation so one thermal boundary crossing can produce at most one physical command.
+
+## Native climate actions
+
+- Advertise and support Home Assistant `climate.turn_on` and `climate.turn_off` actions.
+- `turn_on` restores the last thermal mode and then evaluates demand without forcing a physical ON command.
+- `turn_off` selects logical OFF and sends a physical OFF command only when the controlled device is currently active.
+
+## Manual preset
+
+- Advertise `none` among selectable preset modes and translate it as Manual.
+- Selecting Manual keeps the current target unchanged.
+- Setting a target temperature directly selects Manual automatically.

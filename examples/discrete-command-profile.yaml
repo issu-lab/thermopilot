@@ -13,7 +13,7 @@ commands:
   cool: switch.air_conditioner_cool_command
   heat: switch.air_conditioner_heat_command
   dry: switch.air_conditioner_dry_command
-startup_command_delay: 60
+startup_command_delay: 15
 restore_off_on_delay: 10
 dry_humidity_on: 60
 dry_humidity_off: 55

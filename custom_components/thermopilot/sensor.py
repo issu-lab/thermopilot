@@ -56,9 +56,7 @@ class ThermoPilotDiagnosticSensor(ThermoPilotSensorBase):
 
     @property
     def native_value(self) -> str:
-        if self.controller.last_error:
-            return "error"
-        return self.controller.sensor_health.get("status", "starting")
+        return self.controller.diagnostic_status
 
     @property
     def extra_state_attributes(self) -> dict:

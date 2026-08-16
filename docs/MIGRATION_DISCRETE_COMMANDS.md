@@ -17,13 +17,13 @@
 6. Enable cool, heat and dry.
 7. Select the sensor and command entities documented in `examples/discrete-command-profile.yaml`.
 8. Confirm that the entity is created as `climate.living_room_thermostat`; rename it before continuing if necessary.
-9. Wait through the 60-second command guard.
+9. Wait through the 15-second command guard.
 10. Test logical idle before any physical ON demand.
 11. Validate one cool ON/OFF cycle and one heat ON/OFF cycle.
 12. Validate dry ON above 60% and OFF below 55% when naturally testable.
 13. Validate Home, Away, Sleep, Comfort and manual targets while off.
 14. Restart the integration with saved physical state OFF.
-15. Restart it with saved physical state ON and verify OFF, ten seconds, ON.
+15. Restart it with saved physical state ON and verify OFF, ten seconds, then ON only when thermal demand is present.
 16. Confirm ThermoMatrix, automations and load management still reference the expected entity ID.
 
 ## Rollback

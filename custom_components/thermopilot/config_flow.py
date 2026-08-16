@@ -358,7 +358,7 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
             vol.Required(OPT_HUMIDITY_VALID_MAX, default=self._current(OPT_HUMIDITY_VALID_MAX)): _number(0, 100),
             vol.Required(OPT_PRESSURE_VALID_MIN, default=self._current(OPT_PRESSURE_VALID_MIN)): _number(500, 1200),
             vol.Required(OPT_PRESSURE_VALID_MAX, default=self._current(OPT_PRESSURE_VALID_MAX)): _number(800, 1500),
-            vol.Required(OPT_STARTUP_DELAY, default=self._current(OPT_STARTUP_DELAY)): _number(0, 600, 1),
+            vol.Required(OPT_STARTUP_DELAY, default=self._current(OPT_STARTUP_DELAY)): _number(10, 15, 1),
             vol.Required(OPT_RESTORE_OFF_ON_DELAY, default=self._current(OPT_RESTORE_OFF_ON_DELAY)): _number(1, 120, 1),
         }
 

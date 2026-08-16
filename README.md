@@ -34,7 +34,7 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 > Version 0.1.3 is an initial testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 > [!IMPORTANT]
-> ThermoPilot intentionally remains unavailable during its default 60-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
+> ThermoPilot intentionally remains unavailable during its default 15-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
 
 ---
 
@@ -66,6 +66,7 @@ ThermoPilot is installed and managed as a HACS custom integration. Each configur
 - 🎯 Separate target and preset state for every thermal mode.
 - 🏠 Home, Away, Sleep and Comfort presets.
 - ✋ Manual target state compatible with ThermoMatrix (`preset_mode: none`).
+- 🔌 Native `climate.turn_on` and `climate.turn_off` actions.
 - 💾 Persistent thermostat and last physical-command state.
 - ⏱️ Guarded startup and configurable restoration delays.
 - ⚡ Dedicated power feedback, manual-operation detection and retry support.
@@ -149,7 +150,7 @@ The initial wizard intentionally hides thresholds, delays and preset temperature
 | Maximum target | 30.0 °C |
 | Temperature step | 0.1 °C |
 | Thermal hysteresis | 0.2 °C |
-| Startup command delay | 60 seconds |
+| Startup command delay | 15 seconds |
 
 ### Presets
 
@@ -162,6 +163,8 @@ The initial wizard intentionally hides thresholds, delays and preset temperature
 
 Changing the target temperature sets the preset state to `none`. When the thermostat is off, target and preset changes apply to the last selected thermal mode.
 
+Selecting Cool or Heat activates only the logical thermostat. ThermoPilot sends a physical ON command only after the aggregated perceived temperature crosses the configured hysteresis boundary. Until then, the climate entity remains in `idle`.
+
 ---
 
 ## Discrete Command Strategy
@@ -171,11 +174,11 @@ This strategy is designed for momentary Broadlink entities where `switch.turn_on
 ThermoPilot persists whether it last commanded the device ON. After a restart:
 
 1. sensors and entities become available immediately;
-2. physical commands remain blocked for 60 seconds;
+2. physical commands remain blocked for 15 seconds;
 3. if the saved physical state was ON, ThermoPilot sends OFF;
 4. it waits 10 seconds;
-5. it sends ON for the saved physical mode;
-6. normal thermostat evaluation resumes.
+5. normal thermostat evaluation resumes;
+6. it sends ON only if current temperature and hysteresis still request physical operation.
 
 State quality is reported as `estimated`.
 
@@ -201,7 +204,9 @@ This strategy uses validated three-state power thresholds:
 | 50-200 W | Starting |
 | Above 200 W | On |
 
-Crossing 50 W confirms an ON command. An OFF command is confirmed below 200 W. Defaults use a two-second pulse, a 35-second feedback timeout and at most three attempts.
+Crossing 50 W confirms an ON command. An OFF command is confirmed only below 50 W; the 50-200 W starting range never confirms OFF. Defaults use a two-second pulse, a 60-second feedback timeout and at most three attempts.
+
+Dedicated power feedback is independent of the command strategy. It can also validate discrete ON/OFF commands. In every profile it confirms physical state and detects manual operation; it does not replace the thermal decision.
 
 Unexpected stable power changes are evaluated after 30 seconds. A manual activation is inferred as cool or heat only when current perceived temperature clearly crosses that mode's target and hysteresis. Ambiguous manual activation is reported as unknown and never triggers an automatic command.
 

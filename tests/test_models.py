@@ -54,6 +54,10 @@ class ThermalDecisionTests(unittest.TestCase):
         decision = models.thermal_decision("heat", 20.7, 21, 0.2, False)
         self.assertEqual((decision.action, decision.command), ("heating", "on"))
 
+    def test_heat_activation_at_twenty_six_with_target_twenty_three_stays_idle(self):
+        decision = models.thermal_decision("heat", 26, 23, 0.2, False)
+        self.assertEqual((decision.action, decision.command), ("idle", None))
+
     def test_heat_turns_off_at_upper_boundary(self):
         decision = models.thermal_decision("heat", 21.2, 21, 0.2, True)
         self.assertEqual((decision.action, decision.command), ("idle", "off"))
@@ -91,6 +95,16 @@ class PowerFeedbackTests(unittest.TestCase):
     def test_invalid_power_is_unknown(self):
         self.assertEqual(models.classify_power("unavailable", 50, 200), "unknown")
 
+    def test_starting_or_on_confirms_an_on_command(self):
+        self.assertTrue(models.power_target_reached("starting", True))
+        self.assertTrue(models.power_target_reached("on", True))
+
+    def test_only_off_confirms_an_off_command(self):
+        self.assertTrue(models.power_target_reached("off", False))
+        self.assertFalse(models.power_target_reached("starting", False))
+        self.assertFalse(models.power_target_reached("on", False))
+        self.assertFalse(models.power_target_reached("unknown", False))
+
 
 class PersistenceTests(unittest.TestCase):
     def test_first_start_is_off_with_home_targets(self):
@@ -122,6 +136,7 @@ class DefaultsTests(unittest.TestCase):
         self.assertEqual(const.DEFAULTS["preset_sleep_cool"], 26.2)
         self.assertEqual(const.DEFAULTS[const.OPT_POWER_OFF_BELOW], 50)
         self.assertEqual(const.DEFAULTS[const.OPT_POWER_ON_ABOVE], 200)
+        self.assertEqual(const.DEFAULTS[const.OPT_STARTUP_DELAY], 15)
 
 
 if __name__ == "__main__":

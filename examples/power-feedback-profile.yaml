@@ -16,7 +16,7 @@ power_off_below: 50
 power_on_above: 200
 power_stabilization: 30
 toggle_pulse_duration: 2
-feedback_timeout: 35
+feedback_timeout: 60
 maximum_attempts: 3
-startup_command_delay: 60
+startup_command_delay: 15
 notification_service: notify.mobile_app_phone

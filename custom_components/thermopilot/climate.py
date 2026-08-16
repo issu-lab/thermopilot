@@ -21,6 +21,7 @@ from .const import (
     OPT_MAX_TEMP,
     OPT_MIN_TEMP,
     OPT_TEMP_STEP,
+    PRESET_NONE,
     PRESETS,
 )
 from .controller import ThermoPilotController
@@ -57,7 +58,10 @@ class ThermoPilotClimate(ClimateEntity):
     _attr_should_poll = False
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+        ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.PRESET_MODE
+        | ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
     )
 
     def __init__(self, controller: ThermoPilotController, entry: ConfigEntry) -> None:
@@ -66,7 +70,7 @@ class ThermoPilotClimate(ClimateEntity):
         self._attr_name = entry.title
         self._attr_unique_id = entry.data[CONF_DEVICE_ID]
         self._attr_hvac_modes = [MODE_TO_HA[mode] for mode in controller.supported_modes]
-        self._attr_preset_modes = PRESETS
+        self._attr_preset_modes = [PRESET_NONE, *PRESETS]
         self._attr_min_temp = float(controller.option(OPT_MIN_TEMP))
         self._attr_max_temp = float(controller.option(OPT_MAX_TEMP))
         self._attr_target_temperature_step = float(controller.option(OPT_TEMP_STEP))
@@ -126,6 +130,14 @@ class ThermoPilotClimate(ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         await self.controller.async_set_hvac_mode(hvac_mode.value)
+
+    async def async_turn_on(self) -> None:
+        """Restore the last thermal mode and evaluate physical demand."""
+        await self.controller.async_turn_on()
+
+    async def async_turn_off(self) -> None:
+        """Select logical OFF and stop an active physical device."""
+        await self.controller.async_set_hvac_mode(MODE_OFF)
 
     async def async_set_temperature(self, **kwargs) -> None:
         if ATTR_TEMPERATURE in kwargs:

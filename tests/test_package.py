@@ -52,6 +52,55 @@ class PackageTests(unittest.TestCase):
             flow,
         )
 
+    def test_climate_advertises_native_on_off_and_manual_preset(self):
+        climate = (INTEGRATION / "climate.py").read_text()
+        self.assertIn("ClimateEntityFeature.TURN_ON", climate)
+        self.assertIn("ClimateEntityFeature.TURN_OFF", climate)
+        self.assertIn("async def async_turn_on", climate)
+        self.assertIn("async def async_turn_off", climate)
+        self.assertIn("PRESET_NONE", climate)
+
+    def test_mode_selection_does_not_force_physical_on(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        start = controller.index("    async def async_set_hvac_mode")
+        end = controller.index("    async def async_set_temperature", start)
+        method = controller[start:end]
+        self.assertNotIn("_async_set_physical(True)", method)
+        self.assertIn("await self.async_evaluate()", method)
+
+    def test_environment_control_is_coalesced_and_serialized(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        self.assertIn("_environment_evaluation_cancel", controller)
+        self.assertIn("_evaluation_lock", controller)
+
+    def test_initialization_discards_user_commands_and_reports_initializing(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        sensor = (INTEGRATION / "sensor.py").read_text()
+        for method_name in (
+            "async_set_hvac_mode",
+            "async_set_temperature",
+            "async_set_preset",
+        ):
+            start = controller.index(f"    async def {method_name}")
+            next_method = controller.find("\n    async def ", start + 10)
+            method = controller[start:next_method]
+            self.assertIn("if self.commands_blocked:", method)
+        self.assertIn("return self.controller.diagnostic_status", sensor)
+        self.assertIn('self.last_error == "power_sensor_degraded"', controller)
+
+    def test_existing_startup_delay_is_clamped_to_new_safe_range(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        self.assertIn("if key == OPT_STARTUP_DELAY:", controller)
+        self.assertIn("min(15.0, max(10.0", controller)
+
+    def test_power_updates_do_not_reconcile_during_command_confirmation(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        start = controller.index("    def _power_changed")
+        end = controller.index("    async def _async_finish_startup", start)
+        method = controller[start:end]
+        self.assertIn("recovered_from_feedback_loss", method)
+        self.assertIn("if self._command_pending:", method)
+
 
 if __name__ == "__main__":
     unittest.main()
