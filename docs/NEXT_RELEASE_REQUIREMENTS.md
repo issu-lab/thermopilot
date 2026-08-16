@@ -1,6 +1,6 @@
 # Next Release Requirements
 
-This document records approved behavior for the release following `0.1.2`. It is a planning document only; none of these changes are implemented in `0.1.2`.
+This document records the behavior incorporated into `0.1.4`. Local automated validation is complete; field validation remains required before the release is considered production-ready.
 
 ## README compatibility
 

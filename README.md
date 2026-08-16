@@ -5,7 +5,7 @@
 [![Status](https://img.shields.io/badge/status-active%20development-F0B429?style=flat-square)](#project-status)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.8%2B-41BDF5?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-custom%20integration-C346F4?style=flat-square)](https://www.hacs.xyz/)
-[![License](https://img.shields.io/badge/license-MIT-C346F4?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-C346F4?style=flat-square)](https://github.com/issu-lab/thermopilot/blob/main/LICENSE)
 
 **A configurable native climate controller for Home Assistant.**
 
@@ -24,14 +24,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.3` |
+| **Current version** | `0.1.4` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.3 is an initial testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.1.4 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 > [!IMPORTANT]
 > ThermoPilot intentionally remains unavailable during its default 15-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
@@ -40,7 +40,11 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 
 ## Why It Exists
 
-ThermoPilot was created to replace two independent AppDaemon thermostats with one reusable Home Assistant integration:
+ThermoPilot grew from a real-world need: provide one consistent Home Assistant thermostat for air conditioners and HVAC devices operated through Broadlink or comparable IR/RF remotes, without duplicating the controller for every installation.
+
+It deliberately consumes standard Home Assistant `switch` entities instead of depending on Broadlink-specific APIs. Broadlink, IR and RF devices are common use cases, not requirements: any integration or hardware exposing suitable momentary or command switches can be used.
+
+The original installations used two different AppDaemon thermostats. ThermoPilot replaces them with one reusable integration supporting:
 
 - **Discrete commands** — separate ON and OFF operations, reliable commands and estimated physical state.
 - **Power-feedback toggle** — one stateless command confirmed by measured power, including manual-operation detection and retries.
@@ -100,7 +104,7 @@ Installations with dedicated power feedback may also assign ThermoPilot's power-
 
 ## Installation with HACS
 
-ThermoPilot is not yet published. After the repository is available on GitHub:
+ThermoPilot is available as a custom HACS repository:
 
 1. Open **HACS** in Home Assistant.
 2. Open the top-right menu and select **Custom repositories**.
@@ -279,7 +283,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.3.
+NUT support is not implemented in version 0.1.4.
 
 ---
 
@@ -295,7 +299,7 @@ NUT support is not implemented in version 0.1.3.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](https://github.com/issu-lab/thermopilot/blob/main/LICENSE).
 
 ---
 
@@ -304,7 +308,7 @@ Released under the [MIT License](LICENSE).
 This project is part of the **iSSU Open Homelab ecosystem**.
 
 <a href="https://github.com/issu-lab/Open-Homelab">
-  <img src="assets/issu-open-homelab-badge.png"
+  <img src="https://raw.githubusercontent.com/issu-lab/thermopilot/main/assets/issu-open-homelab-badge.png"
        alt="Explore iSSU Open Homelab"
        width="480">
 </a>

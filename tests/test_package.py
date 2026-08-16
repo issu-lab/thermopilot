@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +101,31 @@ class PackageTests(unittest.TestCase):
         method = controller[start:end]
         self.assertIn("recovered_from_feedback_loss", method)
         self.assertIn("if self._command_pending:", method)
+
+    def test_readme_uses_hacs_safe_footer_and_license_destinations(self):
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn(
+            "https://raw.githubusercontent.com/issu-lab/thermopilot/main/"
+            "assets/issu-open-homelab-badge.png",
+            readme,
+        )
+        self.assertIn(
+            "](https://github.com/issu-lab/thermopilot/blob/main/LICENSE)",
+            readme,
+        )
+        self.assertIsNone(re.search(r'<img\s+src="assets/', readme))
+
+    def test_readme_explains_generic_ir_rf_switch_origin(self):
+        readme = (ROOT / "README.md").read_text()
+        for phrase in ("real-world need", "IR/RF", "standard Home Assistant `switch`"):
+            self.assertIn(phrase, readme)
+        self.assertIn("not requirements", readme)
+
+    def test_recovery_notification_waits_for_reconciliation_result(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        self.assertIn("_async_recover_after_feedback_return", controller)
+        self.assertIn("reconciliation_succeeded", controller)
+        self.assertIn("ThermoPilot recovery failed", controller)
 
 
 if __name__ == "__main__":

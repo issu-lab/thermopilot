@@ -4,7 +4,7 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.4] - 2026-08-16
 
 ### Fixed
 
@@ -17,10 +17,11 @@ The project follows [Semantic Versioning](https://semver.org/).
 - Reduced and clamped the initialization guard to 10-15 seconds, with a 15-second default.
 - Reported `initializing` throughout the startup guard and `online` for normal diagnostic status.
 
-### Planned
+### Changed
 
-- Fix HACS rendering of the footer and License badge by replacing their unresolved relative URLs with absolute GitHub URLs.
-- Expand the README project motivation around unified Broadlink and similar IR/RF thermostat control, while documenting compatibility with any suitable Home Assistant switch entities.
+- Made the footer and License destinations HACS-safe with absolute GitHub URLs and added regression tests for their rendering contract.
+- Expanded the project motivation around unified Broadlink and comparable IR/RF control while documenting support for any suitable Home Assistant switch entities.
+- Delayed power-recovery notifications until reconciliation finishes and added the approved recovery-failure notification.
 
 ## [0.1.3] - 2026-08-15
 

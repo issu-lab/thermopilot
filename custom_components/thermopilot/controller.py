@@ -323,10 +323,12 @@ class ThermoPilotController:
         recovered_from_feedback_loss = self._initialized and (
             was_unavailable or was_blocked
         )
-        if was_unavailable and self._power_outage_notified:
-            self._create_task(self._async_notify_power_restored())
         if recovered_from_feedback_loss:
-            self._create_task(self._async_reconcile_after_power_return())
+            self._create_task(
+                self._async_recover_after_feedback_return(
+                    was_unavailable and self._power_outage_notified
+                )
+            )
         if classification == self._last_power_classification:
             return
         self._last_power_classification = classification
@@ -687,32 +689,56 @@ class ThermoPilotController:
             self._power_outage_notified = True
         self._notify_update()
 
-    async def _async_notify_power_restored(self) -> None:
+    async def _async_notify_power_restored(
+        self, reconciliation_succeeded: bool
+    ) -> None:
         configured = str(self.option(OPT_NOTIFICATION_SERVICE)).strip()
         if configured and "." in configured and self._power_outage_notified:
             domain, service = configured.split(".", 1)
+            title = (
+                "✅ ThermoPilot restored"
+                if reconciliation_succeeded
+                else "❌ ThermoPilot recovery failed"
+            )
+            message = (
+                f"{self.entry.title}: the dedicated power sensor is available "
+                "again. ThermoPilot is online and physical state reconciliation "
+                "completed successfully."
+                if reconciliation_succeeded
+                else (
+                    f"{self.entry.title}: power feedback is available again, but "
+                    "the requested physical state could not be restored after 3 "
+                    "recovery cycles."
+                )
+            )
             await self.hass.services.async_call(
                 domain,
                 service,
                 {
-                    "title": "✅ ThermoPilot restored",
-                    "message": (
-                        f"{self.entry.title}: the dedicated power sensor is available "
-                        "again. ThermoPilot is online and state reconciliation has started."
-                    ),
+                    "title": title,
+                    "message": message,
                 },
                 blocking=False,
             )
         self._power_outage_notified = False
 
-    async def _async_reconcile_after_power_return(self) -> None:
+    async def _async_recover_after_feedback_return(
+        self, notification_required: bool
+    ) -> None:
+        """Reconcile first, then report the actual recovery outcome."""
+        reconciliation_succeeded = await self._async_reconcile_after_power_return()
+        if notification_required:
+            await self._async_notify_power_restored(reconciliation_succeeded)
+
+    async def _async_reconcile_after_power_return(self) -> bool:
         if not self._initialized or self.power_classification == "unknown":
-            return
+            return False
         physical_on = self.power_classification in {"starting", "on"}
         self.state.physical_on = physical_on
         self.state.physical_mode = self._settings_mode() if physical_on else None
         await self._save()
         await self.async_evaluate()
+        return self.last_error is None and self.power_classification != "unknown"
 
     async def _async_reconcile_manual_power(self, now) -> None:
         self._power_debounce_cancel = None
