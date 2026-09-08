@@ -53,6 +53,11 @@ class PackageTests(unittest.TestCase):
             flow,
         )
 
+    def test_legacy_dry_thresholds_are_preserved_for_rollback(self):
+        flow = (INTEGRATION / "config_flow.py").read_text()
+        self.assertIn("for legacy_key in (OPT_DRY_ON, OPT_DRY_OFF):", flow)
+        self.assertIn("user_input[legacy_key] = self.config_entry.options[legacy_key]", flow)
+
     def test_climate_advertises_native_on_off_and_manual_preset(self):
         climate = (INTEGRATION / "climate.py").read_text()
         self.assertIn("ClimateEntityFeature.TURN_ON", climate)
@@ -60,6 +65,12 @@ class PackageTests(unittest.TestCase):
         self.assertIn("async def async_turn_on", climate)
         self.assertIn("async def async_turn_off", climate)
         self.assertIn("PRESET_NONE", climate)
+
+    def test_climate_exposes_native_humidity_target_for_dry(self):
+        climate = (INTEGRATION / "climate.py").read_text()
+        self.assertIn("ClimateEntityFeature.TARGET_HUMIDITY", climate)
+        self.assertIn("def target_humidity", climate)
+        self.assertIn("async def async_set_humidity", climate)
 
     def test_mode_selection_does_not_force_physical_on(self):
         controller = (INTEGRATION / "controller.py").read_text()
@@ -80,6 +91,7 @@ class PackageTests(unittest.TestCase):
         for method_name in (
             "async_set_hvac_mode",
             "async_set_temperature",
+            "async_set_humidity",
             "async_set_preset",
         ):
             start = controller.index(f"    async def {method_name}")
@@ -150,6 +162,15 @@ class PackageTests(unittest.TestCase):
             end = controller.find("\n    async def ", start + 10)
             method = controller[start:end]
             self.assertIn("self._notify_update()", method)
+
+    def test_explicit_off_bypasses_dry_interval_and_stops_immediately(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        start = controller.index("    async def async_set_hvac_mode")
+        end = controller.index("    async def async_turn_on", start)
+        method = controller[start:end]
+        self.assertIn("if physical_was_on:", method)
+        self.assertIn("await self._async_set_physical(False)", method)
+        self.assertNotIn("_minimum_dry_interval_elapsed", method)
 
 
 if __name__ == "__main__":

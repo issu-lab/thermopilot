@@ -4,6 +4,18 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-09-08
+
+### Changed
+
+- Reworked Dry mode as a dew-point controller with a native, temperature-adaptive
+  Home Assistant humidity target constrained to configurable limits.
+- Added independent Home, Away, Sleep and Comfort dew-point presets for Dry.
+- Kept explicit user OFF commands outside Dry hysteresis and minimum-interval
+  protection so active hardware is stopped immediately.
+- Exposed current and target dew point in diagnostics and replaced the legacy
+  fixed Dry ON/OFF humidity thresholds in advanced options.
+
 ## [0.1.5] - 2026-08-16
 
 ### Fixed

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "thermopilot"
-INTEGRATION_VERSION: Final = "0.1.5"
+INTEGRATION_VERSION: Final = "0.2.0"
 PLATFORMS: Final = ["climate", "sensor"]
 STORAGE_VERSION: Final = 1
 
@@ -46,6 +46,10 @@ OPT_RESTORE_OFF_ON_DELAY: Final = "restore_off_on_delay"
 OPT_DRY_ON: Final = "dry_humidity_on"
 OPT_DRY_OFF: Final = "dry_humidity_off"
 OPT_DRY_MIN_INTERVAL: Final = "dry_minimum_interval"
+OPT_DRY_DEW_POINT_HYSTERESIS: Final = "dry_dew_point_hysteresis"
+OPT_MIN_HUMIDITY: Final = "minimum_target_humidity"
+OPT_MAX_HUMIDITY: Final = "maximum_target_humidity"
+OPT_HUMIDITY_STEP: Final = "target_humidity_step"
 OPT_POWER_OFF_BELOW: Final = "power_off_below"
 OPT_POWER_ON_ABOVE: Final = "power_on_above"
 OPT_POWER_STABILIZATION: Final = "power_stabilization"
@@ -78,6 +82,10 @@ DEFAULTS: Final = {
     OPT_DRY_ON: 60.0,
     OPT_DRY_OFF: 55.0,
     OPT_DRY_MIN_INTERVAL: 300,
+    OPT_DRY_DEW_POINT_HYSTERESIS: 1.0,
+    OPT_MIN_HUMIDITY: 30.0,
+    OPT_MAX_HUMIDITY: 45.0,
+    OPT_HUMIDITY_STEP: 1.0,
     OPT_POWER_OFF_BELOW: 50.0,
     OPT_POWER_ON_ABOVE: 200.0,
     OPT_POWER_STABILIZATION: 30,
@@ -94,6 +102,10 @@ DEFAULTS: Final = {
     "preset_sleep_heat": 18.0,
     "preset_comfort_cool": 24.0,
     "preset_comfort_heat": 20.0,
+    "preset_home_dry": 11.0,
+    "preset_away_dry": 13.0,
+    "preset_sleep_dry": 12.0,
+    "preset_comfort_dry": 9.0,
 }
 
 

@@ -27,11 +27,13 @@ async def async_get_config_entry_diagnostics(
             "humidity": controller.current_humidity,
             "pressure": controller.current_pressure,
             "perceived_temperature": controller.perceived_temperature,
+            "dew_point": controller.current_dew_point,
         },
         "thermostat": {
             "hvac_mode": controller.state.hvac_mode,
             "hvac_action": controller.hvac_action,
             "target_temperature": controller.target_temperature,
+            "target_humidity": controller.target_humidity,
             "preset": controller.preset,
         },
     }

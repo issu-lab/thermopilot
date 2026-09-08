@@ -19,7 +19,10 @@ from .const import (
     MODE_HEAT,
     MODE_OFF,
     OPT_MAX_TEMP,
+    OPT_MAX_HUMIDITY,
     OPT_MIN_TEMP,
+    OPT_MIN_HUMIDITY,
+    OPT_HUMIDITY_STEP,
     OPT_TEMP_STEP,
     PRESET_NONE,
     PRESETS,
@@ -74,6 +77,13 @@ class ThermoPilotClimate(ClimateEntity):
         self._attr_min_temp = float(controller.option(OPT_MIN_TEMP))
         self._attr_max_temp = float(controller.option(OPT_MAX_TEMP))
         self._attr_target_temperature_step = float(controller.option(OPT_TEMP_STEP))
+        if MODE_DRY in controller.supported_modes:
+            self._attr_supported_features |= ClimateEntityFeature.TARGET_HUMIDITY
+            self._attr_min_humidity = float(controller.option(OPT_MIN_HUMIDITY))
+            self._attr_max_humidity = float(controller.option(OPT_MAX_HUMIDITY))
+            self._attr_target_humidity_step = float(
+                controller.option(OPT_HUMIDITY_STEP)
+            )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
@@ -109,6 +119,10 @@ class ThermoPilotClimate(ClimateEntity):
         return self.controller.target_temperature
 
     @property
+    def target_humidity(self) -> float | None:
+        return self.controller.target_humidity
+
+    @property
     def hvac_mode(self) -> HVACMode:
         return MODE_TO_HA[self.controller.state.hvac_mode]
 
@@ -125,6 +139,10 @@ class ThermoPilotClimate(ClimateEntity):
         return {
             "raw_temperature": self.controller.current_temperature,
             "pressure": self.controller.current_pressure,
+            "dew_point": self.controller.current_dew_point,
+            "target_dew_point": (
+                self.controller.effective_dry_target_dew_point
+            ),
             **self.controller.diagnostic_attributes,
         }
 
@@ -142,6 +160,9 @@ class ThermoPilotClimate(ClimateEntity):
     async def async_set_temperature(self, **kwargs) -> None:
         if ATTR_TEMPERATURE in kwargs:
             await self.controller.async_set_temperature(float(kwargs[ATTR_TEMPERATURE]))
+
+    async def async_set_humidity(self, humidity: int) -> None:
+        await self.controller.async_set_humidity(float(humidity))
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         await self.controller.async_set_preset(preset_mode)

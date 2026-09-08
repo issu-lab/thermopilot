@@ -80,12 +80,14 @@
           "temperature_valid_max": "Maximum valid sensor temperature",
           "humidity_valid_min": "Minimum valid humidity",
           "humidity_valid_max": "Maximum valid humidity",
+          "minimum_target_humidity": "Minimum humidity target",
+          "maximum_target_humidity": "Maximum humidity target",
+          "target_humidity_step": "Target humidity step",
           "pressure_valid_min": "Minimum valid pressure",
           "pressure_valid_max": "Maximum valid pressure",
           "startup_command_delay": "Startup command delay",
           "restore_off_on_delay": "Restore delay between OFF and ON",
-          "dry_humidity_on": "Dry ON humidity",
-          "dry_humidity_off": "Dry OFF humidity",
+          "dry_dew_point_hysteresis": "Dry dew-point hysteresis",
           "dry_minimum_interval": "Minimum dry command interval",
           "power_off_below": "Power below which the device is off",
           "power_on_above": "Power above which the device is on",
@@ -102,14 +104,18 @@
           "preset_sleep_cool": "Sleep preset — Cool",
           "preset_sleep_heat": "Sleep preset — Heat",
           "preset_comfort_cool": "Comfort preset — Cool",
-          "preset_comfort_heat": "Comfort preset — Heat"
+          "preset_comfort_heat": "Comfort preset — Heat",
+          "preset_home_dry": "Home preset — Dry dew point",
+          "preset_away_dry": "Away preset — Dry dew point",
+          "preset_sleep_dry": "Sleep preset — Dry dew point",
+          "preset_comfort_dry": "Comfort preset — Dry dew point"
         }
       }
     },
     "error": {
       "invalid_temperature_range": "Minimum target temperature must be lower than maximum.",
       "invalid_sensor_range": "Every minimum sensor value must be lower than its maximum.",
-      "invalid_dry_range": "Dry OFF humidity must be lower than Dry ON humidity.",
+      "invalid_humidity_target_range": "Minimum humidity target must be lower than maximum.",
       "invalid_power_range": "Power OFF threshold must be lower than the ON threshold."
     }
   },

@@ -35,13 +35,14 @@ from .const import (
     MODE_HEAT,
     MODE_OFF,
     OPT_DRY_MIN_INTERVAL,
-    OPT_DRY_OFF,
-    OPT_DRY_ON,
+    OPT_DRY_DEW_POINT_HYSTERESIS,
     OPT_FEEDBACK_TIMEOUT,
     OPT_HUMIDITY_VALID_MAX,
     OPT_HUMIDITY_VALID_MIN,
+    OPT_MAX_HUMIDITY,
     OPT_HYSTERESIS,
     OPT_MAX_ATTEMPTS,
+    OPT_MIN_HUMIDITY,
     OPT_NOTIFICATION_SERVICE,
     OPT_POWER_OFF_BELOW,
     OPT_POWER_ON_ABOVE,
@@ -64,10 +65,13 @@ from .const import (
 from .models import (
     ModeState,
     PersistedState,
+    bounded_dew_point,
     classify_power,
     dry_decision,
+    dew_point_celsius,
     perceived_temperature,
     power_target_reached,
+    relative_humidity_for_dew_point,
     thermal_decision,
     valid_average,
 )
@@ -138,13 +142,42 @@ class ThermoPilotController:
     @property
     def target_temperature(self) -> float | None:
         """Return target for the active or last selected thermal mode."""
+        if self.state.hvac_mode == MODE_DRY:
+            return None
         mode = self._settings_mode()
         return self.state.modes[mode].target if mode in self.state.modes else None
 
     @property
+    def target_humidity(self) -> float | None:
+        """Return the temperature-adaptive RH equivalent of the dry target."""
+        target_dew_point = self.effective_dry_target_dew_point
+        if target_dew_point is None:
+            return None
+        return relative_humidity_for_dew_point(
+            self.current_temperature, target_dew_point
+        )
+
+    @property
+    def effective_dry_target_dew_point(self) -> float | None:
+        """Return the Dry target constrained to the advertised RH range."""
+        if not self.data.get(CONF_ENABLE_DRY) or MODE_DRY not in self.state.modes:
+            return None
+        return bounded_dew_point(
+            self.current_temperature,
+            self.state.modes[MODE_DRY].target,
+            float(self.option(OPT_MIN_HUMIDITY)),
+            float(self.option(OPT_MAX_HUMIDITY)),
+        )
+
+    @property
+    def current_dew_point(self) -> float | None:
+        """Return current dew point for diagnostics and dry decisions."""
+        return dew_point_celsius(self.current_temperature, self.current_humidity)
+
+    @property
     def preset(self) -> str:
         """Return preset for the active or last selected thermal mode."""
-        mode = self._settings_mode()
+        mode = self._preset_settings_mode()
         return self.state.modes[mode].preset if mode in self.state.modes else PRESET_NONE
 
     def preset_values(self, preset: str, mode: str) -> float:
@@ -155,6 +188,10 @@ class ThermoPilotController:
         modes: dict[str, ModeState] = {}
         for mode in self.data[CONF_MODES]:
             modes[mode] = ModeState(self.preset_values(PRESET_HOME, mode), PRESET_HOME)
+        if self.data.get(CONF_ENABLE_DRY):
+            modes[MODE_DRY] = ModeState(
+                self.preset_values(PRESET_HOME, MODE_DRY), PRESET_HOME
+            )
         fallback = MODE_COOL if MODE_COOL in modes else MODE_HEAT
         return modes, fallback
 
@@ -237,9 +274,15 @@ class ThermoPilotController:
         await self.store.async_save(self.state.to_dict())
 
     def _settings_mode(self) -> str:
-        if self.state.hvac_mode in self.state.modes:
+        if self.state.hvac_mode in {MODE_COOL, MODE_HEAT}:
             return self.state.hvac_mode
         return self.state.last_thermal_mode
+
+    def _preset_settings_mode(self) -> str:
+        """Return Dry while active, otherwise the selected thermal mode."""
+        if self.state.hvac_mode == MODE_DRY and MODE_DRY in self.state.modes:
+            return MODE_DRY
+        return self._settings_mode()
 
     def _states_for(self, entities: list[str]) -> list[object]:
         return [
@@ -441,6 +484,8 @@ class ThermoPilotController:
         await self._save()
         self._notify_update()
         if physical_was_on:
+            # Explicit mode changes, especially user OFF, bypass the automatic
+            # dry command interval and stop the active hardware immediately.
             await self._async_set_physical(False)
         await self.async_evaluate()
 
@@ -465,6 +510,34 @@ class ThermoPilotController:
         self._notify_update()
         await self.async_evaluate()
 
+    async def async_set_humidity(self, humidity: float) -> None:
+        """Set a manual Dry target, persisted internally as dew point."""
+        if self.commands_blocked:
+            self.last_command_result = "discarded_while_initializing"
+            self._notify_update()
+            return
+        if not self.data.get(CONF_ENABLE_DRY) or MODE_DRY not in self.state.modes:
+            raise ValueError("Dry mode is not enabled")
+        if self.current_temperature is None:
+            self.last_command_result = "humidity_target_rejected_no_temperature"
+            self._notify_update()
+            return
+        target_humidity = min(
+            float(self.option(OPT_MAX_HUMIDITY)),
+            max(float(self.option(OPT_MIN_HUMIDITY)), float(humidity)),
+        )
+        target_dew_point = dew_point_celsius(
+            self.current_temperature, target_humidity
+        )
+        if target_dew_point is None:
+            raise ValueError("Invalid humidity target")
+        self.state.modes[MODE_DRY].target = target_dew_point
+        self.state.modes[MODE_DRY].preset = PRESET_NONE
+        await self._save()
+        self._notify_update()
+        if self.state.hvac_mode == MODE_DRY:
+            await self.async_evaluate()
+
     async def async_set_preset(self, preset: str) -> None:
         """Apply one standard preset to the active or last thermal mode."""
         if self.commands_blocked:
@@ -472,7 +545,7 @@ class ThermoPilotController:
             self._notify_update()
             return
         if preset == PRESET_NONE:
-            mode = self._settings_mode()
+            mode = self._preset_settings_mode()
             self.state.modes[mode].preset = PRESET_NONE
             await self._save()
             self._notify_update()
@@ -480,7 +553,7 @@ class ThermoPilotController:
             return
         if preset not in PRESETS:
             raise ValueError(f"Unsupported preset: {preset}")
-        mode = self._settings_mode()
+        mode = self._preset_settings_mode()
         self.state.modes[mode].target = self.preset_values(preset, mode)
         self.state.modes[mode].preset = preset
         await self._save()
@@ -506,11 +579,13 @@ class ThermoPilotController:
             self._notify_update()
             return
         if mode == MODE_DRY:
+            target_dew_point = self.effective_dry_target_dew_point
             decision = dry_decision(
+                self.current_temperature,
                 self.current_humidity,
                 self.state.physical_on,
-                float(self.option(OPT_DRY_ON)),
-                float(self.option(OPT_DRY_OFF)),
+                target_dew_point,
+                float(self.option(OPT_DRY_DEW_POINT_HYSTERESIS)),
                 self._minimum_dry_interval_elapsed(),
             )
         else:
@@ -891,6 +966,9 @@ class ThermoPilotController:
             "started_at": self.started_at,
             "commands_blocked": self.commands_blocked,
             "sensor_health": self.sensor_health,
+            "dew_point": self.current_dew_point,
+            "target_humidity": self.target_humidity,
+            "target_dew_point": self.effective_dry_target_dew_point,
             "last_command_result": self.last_command_result,
             "last_command_at": self.state.last_command_at,
             "last_error": self.last_error,

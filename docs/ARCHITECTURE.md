@@ -21,6 +21,8 @@ ThermoPilot separates:
 
 - logical HVAC mode;
 - target and preset per thermal mode;
+- a separate Dry dew-point target exposed as temperature-adaptive relative
+  humidity through the native Climate API;
 - last selected thermal mode;
 - last physical command state;
 - current HVAC action;
@@ -37,6 +39,9 @@ This distinction prevents an active climate mode in `idle` from being mistaken f
 - Heat/cool commands are derived only from the aggregated perceived temperature and hysteresis.
 - Environment-source updates are coalesced and thermostat evaluations are serialized.
 - Missing humidity suspends dry commands.
+- Missing temperature also suspends Dry because dew point requires both inputs.
+- Dry starts above its target plus dew-point hysteresis and stops at the target.
+- An explicit user OFF bypasses the Dry minimum command interval.
 - Only one physical command transaction runs at a time.
 - Power-feedback retries always re-read power before pulsing the toggle.
 - Power changes observed during command confirmation never start a parallel reconciliation.

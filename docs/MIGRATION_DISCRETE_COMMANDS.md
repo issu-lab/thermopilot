@@ -20,11 +20,25 @@
 9. Wait through the 15-second command guard.
 10. Test logical idle before any physical ON demand.
 11. Validate one cool ON/OFF cycle and one heat ON/OFF cycle.
-12. Validate dry ON above 60% and OFF below 55% when naturally testable.
-13. Validate Home, Away, Sleep, Comfort and manual targets while off.
-14. Restart the integration with saved physical state OFF.
-15. Restart it with saved physical state ON and verify OFF, ten seconds, then ON only when thermal demand is present.
-16. Confirm ThermoMatrix, automations and load management still reference the expected entity ID.
+12. Configure the Dry humidity display range and dew-point presets. Defaults:
+    30-45% display range; Comfort 9 °C, Home 11 °C, Sleep 12 °C and Away 13 °C
+    dew point.
+13. Validate Dry ON above the selected preset plus 1 °C dew-point hysteresis
+    and OFF at the preset when naturally testable.
+14. While Dry is active, select HVAC Off and verify the physical OFF command is
+    sent immediately, without waiting for the Dry minimum command interval.
+15. Validate Home, Away, Sleep, Comfort and manual targets while off.
+16. Restart the integration with saved physical state OFF.
+17. Restart it with saved physical state ON and verify OFF, ten seconds, then ON only when demand is present.
+18. Confirm ThermoMatrix, automations and load management still reference the expected entity ID.
+
+## Dry option migration
+
+Existing `dry_humidity_on` and `dry_humidity_off` option values are retained in
+Home Assistant storage for rollback but are no longer used. Opening and saving
+advanced options records the new humidity display limits, dew-point hysteresis
+and four Dry preset targets. Until then, the integration uses the documented
+defaults without requiring the config entry to be recreated.
 
 ## Rollback
 

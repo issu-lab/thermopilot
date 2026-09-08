@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from math import isfinite
+from math import exp, isfinite, log
 from typing import Iterable
 
 from .const import MODE_COOL, MODE_HEAT, MODE_OFF, PRESET_HOME, PRESET_NONE
@@ -59,6 +59,60 @@ def perceived_temperature(
         + c9 * temperature**2 * humidity**2
     )
     return round(heat_index + pressure_delta, 1)
+
+
+def dew_point_celsius(
+    temperature: float | None, humidity: float | None
+) -> float | None:
+    """Return dew point from air temperature and relative humidity."""
+    if temperature is None or humidity is None:
+        return None
+    try:
+        temp = float(temperature)
+        relative_humidity = float(humidity)
+    except (TypeError, ValueError):
+        return None
+    if not isfinite(temp) or not isfinite(relative_humidity):
+        return None
+    if relative_humidity <= 0 or relative_humidity > 100:
+        return None
+    a, b = 17.62, 243.12
+    gamma = log(relative_humidity / 100.0) + (a * temp) / (b + temp)
+    return round((b * gamma) / (a - gamma), 2)
+
+
+def relative_humidity_for_dew_point(
+    temperature: float | None, dew_point: float | None
+) -> float | None:
+    """Return relative humidity represented by one dew point at a temperature."""
+    if temperature is None or dew_point is None:
+        return None
+    try:
+        temp = float(temperature)
+        target = float(dew_point)
+    except (TypeError, ValueError):
+        return None
+    if not isfinite(temp) or not isfinite(target):
+        return None
+    a, b = 17.62, 243.12
+    humidity = 100.0 * exp(
+        (a * target) / (b + target) - (a * temp) / (b + temp)
+    )
+    return round(min(100.0, max(0.0, humidity)), 1)
+
+
+def bounded_dew_point(
+    temperature: float | None,
+    target_dew_point: float | None,
+    minimum_humidity: float,
+    maximum_humidity: float,
+) -> float | None:
+    """Clamp a dew-point target to the configured relative-humidity band."""
+    equivalent = relative_humidity_for_dew_point(temperature, target_dew_point)
+    if equivalent is None:
+        return None
+    bounded_humidity = min(maximum_humidity, max(minimum_humidity, equivalent))
+    return dew_point_celsius(temperature, bounded_humidity)
 
 
 def classify_power(power: object, off_below: float, on_above: float) -> str:
@@ -177,19 +231,21 @@ def thermal_decision(
 
 
 def dry_decision(
+    temperature: float | None,
     humidity: float | None,
     physical_on: bool,
-    turn_on_above: float,
-    turn_off_below: float,
+    target_dew_point: float | None,
+    dew_point_hysteresis: float,
     interval_elapsed: bool,
 ) -> Decision:
-    """Apply dry-mode humidity hysteresis and command interval protection."""
-    if humidity is None:
+    """Control dry mode by moisture content instead of raw relative humidity."""
+    current_dew_point = dew_point_celsius(temperature, humidity)
+    if current_dew_point is None or target_dew_point is None:
         return Decision("unknown")
     if not interval_elapsed:
         return Decision("drying" if physical_on else "idle")
-    if not physical_on and humidity > turn_on_above:
+    if not physical_on and current_dew_point > target_dew_point + dew_point_hysteresis:
         return Decision("drying", "on")
-    if physical_on and humidity < turn_off_below:
+    if physical_on and current_dew_point <= target_dew_point:
         return Decision("idle", "off")
     return Decision("drying" if physical_on else "idle")

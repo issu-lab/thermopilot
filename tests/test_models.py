@@ -37,6 +37,30 @@ class PerceivedTemperatureTests(unittest.TestCase):
         self.assertGreater(models.perceived_temperature(30, humidity=70), 30)
 
 
+class DewPointTests(unittest.TestCase):
+    def test_calculates_known_room_dew_point(self):
+        self.assertAlmostEqual(models.dew_point_celsius(24, 44), 11, delta=0.15)
+
+    def test_converts_dew_point_back_to_relative_humidity(self):
+        self.assertAlmostEqual(
+            models.relative_humidity_for_dew_point(24, 11), 44, delta=0.2
+        )
+
+    def test_rejects_missing_or_invalid_humidity(self):
+        self.assertIsNone(models.dew_point_celsius(24, None))
+        self.assertIsNone(models.dew_point_celsius(24, 0))
+
+    def test_dew_point_target_is_bounded_by_advertised_humidity(self):
+        low = models.bounded_dew_point(32, 9, 30, 45)
+        high = models.bounded_dew_point(18, 13, 30, 45)
+        self.assertAlmostEqual(
+            models.relative_humidity_for_dew_point(32, low), 30, delta=0.2
+        )
+        self.assertAlmostEqual(
+            models.relative_humidity_for_dew_point(18, high), 45, delta=0.2
+        )
+
+
 class ThermalDecisionTests(unittest.TestCase):
     def test_cool_is_idle_below_target(self):
         decision = models.thermal_decision("cool", 25, 26, 0.2, False)
@@ -68,20 +92,25 @@ class ThermalDecisionTests(unittest.TestCase):
 
 
 class DryDecisionTests(unittest.TestCase):
-    def test_turns_on_above_sixty_percent(self):
-        decision = models.dry_decision(61, False, 60, 55, True)
+    def test_turns_on_above_target_dew_point_and_hysteresis(self):
+        decision = models.dry_decision(26, 50, False, 11, 1, True)
         self.assertEqual((decision.action, decision.command), ("drying", "on"))
 
-    def test_turns_off_below_fifty_five_percent(self):
-        decision = models.dry_decision(54, True, 60, 55, True)
+    def test_turns_off_at_target_dew_point(self):
+        target_humidity = models.relative_humidity_for_dew_point(24, 11)
+        decision = models.dry_decision(24, target_humidity, True, 11, 1, True)
         self.assertEqual((decision.action, decision.command), ("idle", "off"))
 
     def test_respects_minimum_interval(self):
-        decision = models.dry_decision(70, False, 60, 55, False)
+        decision = models.dry_decision(26, 70, False, 11, 1, False)
         self.assertIsNone(decision.command)
 
     def test_suspends_without_real_humidity(self):
-        decision = models.dry_decision(None, False, 60, 55, True)
+        decision = models.dry_decision(26, None, False, 11, 1, True)
+        self.assertEqual((decision.action, decision.command), ("unknown", None))
+
+    def test_suspends_without_temperature(self):
+        decision = models.dry_decision(None, 50, False, 11, 1, True)
         self.assertEqual((decision.action, decision.command), ("unknown", None))
 
 
@@ -137,6 +166,10 @@ class DefaultsTests(unittest.TestCase):
         self.assertEqual(const.DEFAULTS[const.OPT_POWER_OFF_BELOW], 50)
         self.assertEqual(const.DEFAULTS[const.OPT_POWER_ON_ABOVE], 200)
         self.assertEqual(const.DEFAULTS[const.OPT_STARTUP_DELAY], 15)
+        self.assertEqual(const.DEFAULTS[const.OPT_MIN_HUMIDITY], 30)
+        self.assertEqual(const.DEFAULTS[const.OPT_MAX_HUMIDITY], 45)
+        self.assertEqual(const.DEFAULTS["preset_comfort_dry"], 9)
+        self.assertEqual(const.DEFAULTS["preset_home_dry"], 11)
 
 
 if __name__ == "__main__":

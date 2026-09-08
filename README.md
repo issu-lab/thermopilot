@@ -66,7 +66,8 @@ ThermoPilot is installed and managed as a HACS custom integration. Each configur
 - 💧 Optional humidity and pressure sensor averaging.
 - 🥵 Existing Steadman perceived-temperature calculation.
 - ❄️ Independently selectable cool and heat modes.
-- 💨 Optional humidity-controlled dry mode for discrete commands.
+- 💨 Optional dew-point-controlled Dry mode with native humidity target and
+  independent presets for discrete commands.
 - 🎯 Separate target and preset state for every thermal mode.
 - 🏠 Home, Away, Sleep and Comfort presets.
 - ✋ Manual target state compatible with ThermoMatrix (`preset_mode: none`).
@@ -190,11 +191,16 @@ State quality is reported as `estimated`.
 
 Dry mode is active only when selected by the user:
 
-- ON above 60% humidity;
-- OFF below 55% humidity;
-- state retained between both thresholds;
+- current moisture is evaluated as dew point from temperature and humidity;
+- ON above the preset dew point plus the configured hysteresis;
+- OFF at or below the preset dew point;
+- the native humidity target adapts with temperature and is constrained to
+  30-45% by default;
+- Comfort, Home, Sleep and Away default to 9, 11, 12 and 13 °C dew point;
 - at least five minutes between physical changes;
-- suspended when no real humidity reading is available.
+- suspended when no real temperature or humidity reading is available;
+- an explicit HVAC Off command is always sent immediately and does not wait
+  for the five-minute automatic-command interval.
 
 ---
 

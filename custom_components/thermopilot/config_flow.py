@@ -28,17 +28,22 @@ from .const import (
     DEFAULTS,
     DOMAIN,
     MODE_COOL,
+    MODE_DRY,
     MODE_HEAT,
+    OPT_DRY_DEW_POINT_HYSTERESIS,
     OPT_DRY_MIN_INTERVAL,
     OPT_DRY_OFF,
     OPT_DRY_ON,
     OPT_FEEDBACK_TIMEOUT,
     OPT_HUMIDITY_VALID_MAX,
     OPT_HUMIDITY_VALID_MIN,
+    OPT_HUMIDITY_STEP,
     OPT_HYSTERESIS,
     OPT_MAX_ATTEMPTS,
+    OPT_MAX_HUMIDITY,
     OPT_MAX_TEMP,
     OPT_MIN_TEMP,
+    OPT_MIN_HUMIDITY,
     OPT_NOTIFICATION_SERVICE,
     OPT_POWER_OFF_BELOW,
     OPT_POWER_ON_ABOVE,
@@ -332,19 +337,22 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_sensor_range"
             elif user_input[OPT_HUMIDITY_VALID_MIN] >= user_input[OPT_HUMIDITY_VALID_MAX]:
                 errors["base"] = "invalid_sensor_range"
-            elif user_input[OPT_PRESSURE_VALID_MIN] >= user_input[OPT_PRESSURE_VALID_MAX]:
-                errors["base"] = "invalid_sensor_range"
             elif (
                 self.config_entry.data.get(CONF_ENABLE_DRY)
-                and user_input[OPT_DRY_OFF] >= user_input[OPT_DRY_ON]
+                and user_input[OPT_MIN_HUMIDITY] >= user_input[OPT_MAX_HUMIDITY]
             ):
-                errors["base"] = "invalid_dry_range"
+                errors["base"] = "invalid_humidity_target_range"
+            elif user_input[OPT_PRESSURE_VALID_MIN] >= user_input[OPT_PRESSURE_VALID_MAX]:
+                errors["base"] = "invalid_sensor_range"
             elif (
                 self.config_entry.data.get(CONF_POWER_SENSOR)
                 and user_input[OPT_POWER_OFF_BELOW] >= user_input[OPT_POWER_ON_ABOVE]
             ):
                 errors["base"] = "invalid_power_range"
             else:
+                for legacy_key in (OPT_DRY_ON, OPT_DRY_OFF):
+                    if legacy_key in self.config_entry.options:
+                        user_input[legacy_key] = self.config_entry.options[legacy_key]
                 return self.async_create_entry(title="", data=user_input)
 
         fields: dict[Any, Any] = {
@@ -365,8 +373,13 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
         if self.config_entry.data.get(CONF_ENABLE_DRY):
             fields.update(
                 {
-                    vol.Required(OPT_DRY_ON, default=self._current(OPT_DRY_ON)): _number(1, 100),
-                    vol.Required(OPT_DRY_OFF, default=self._current(OPT_DRY_OFF)): _number(0, 99),
+                    vol.Required(OPT_MIN_HUMIDITY, default=self._current(OPT_MIN_HUMIDITY)): _number(20, 60, 1),
+                    vol.Required(OPT_MAX_HUMIDITY, default=self._current(OPT_MAX_HUMIDITY)): _number(25, 70, 1),
+                    vol.Required(OPT_HUMIDITY_STEP, default=self._current(OPT_HUMIDITY_STEP)): _number(1, 5, 1),
+                    vol.Required(
+                        OPT_DRY_DEW_POINT_HYSTERESIS,
+                        default=self._current(OPT_DRY_DEW_POINT_HYSTERESIS),
+                    ): _number(0.1, 5, 0.1),
                     vol.Required(OPT_DRY_MIN_INTERVAL, default=self._current(OPT_DRY_MIN_INTERVAL)): _number(0, 3600, 1),
                 }
             )
@@ -392,6 +405,9 @@ class ThermoPilotOptionsFlow(config_entries.OptionsFlow):
             for mode in self.config_entry.data[CONF_MODES]:
                 key = f"preset_{preset}_{mode}"
                 fields[vol.Required(key, default=self._current(key))] = _number(5, 40)
+            if self.config_entry.data.get(CONF_ENABLE_DRY):
+                key = f"preset_{preset}_{MODE_DRY}"
+                fields[vol.Required(key, default=self._current(key))] = _number(-5, 25)
 
         return self.async_show_form(
             step_id="init", data_schema=vol.Schema(fields), errors=errors

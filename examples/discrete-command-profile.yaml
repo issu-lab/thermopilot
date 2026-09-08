@@ -15,6 +15,11 @@ commands:
   dry: switch.air_conditioner_dry_command
 startup_command_delay: 15
 restore_off_on_delay: 10
-dry_humidity_on: 60
-dry_humidity_off: 55
+minimum_target_humidity: 30
+maximum_target_humidity: 45
+dry_dew_point_hysteresis: 1
 dry_minimum_interval: 300
+preset_home_dry: 11
+preset_away_dry: 13
+preset_sleep_dry: 12
+preset_comfort_dry: 9

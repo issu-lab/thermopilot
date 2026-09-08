@@ -80,12 +80,14 @@
           "temperature_valid_max": "Temperatura sensore massima valida",
           "humidity_valid_min": "Umidità minima valida",
           "humidity_valid_max": "Umidità massima valida",
+          "minimum_target_humidity": "Target umidità minimo",
+          "maximum_target_humidity": "Target umidità massimo",
+          "target_humidity_step": "Passo target umidità",
           "pressure_valid_min": "Pressione minima valida",
           "pressure_valid_max": "Pressione massima valida",
           "startup_command_delay": "Ritardo comandi all'avvio",
           "restore_off_on_delay": "Ritardo tra OFF e ON al ripristino",
-          "dry_humidity_on": "Umidità attivazione dry",
-          "dry_humidity_off": "Umidità disattivazione dry",
+          "dry_dew_point_hysteresis": "Isteresi punto di rugiada Dry",
           "dry_minimum_interval": "Intervallo minimo comandi dry",
           "power_off_below": "Potenza sotto la quale il dispositivo è spento",
           "power_on_above": "Potenza sopra la quale il dispositivo è acceso",
@@ -102,14 +104,18 @@
           "preset_sleep_cool": "Preset Notte — Raffrescamento",
           "preset_sleep_heat": "Preset Notte — Riscaldamento",
           "preset_comfort_cool": "Preset Comfort — Raffrescamento",
-          "preset_comfort_heat": "Preset Comfort — Riscaldamento"
+          "preset_comfort_heat": "Preset Comfort — Riscaldamento",
+          "preset_home_dry": "Preset Casa — Punto di rugiada Dry",
+          "preset_away_dry": "Preset Assente — Punto di rugiada Dry",
+          "preset_sleep_dry": "Preset Notte — Punto di rugiada Dry",
+          "preset_comfort_dry": "Preset Comfort — Punto di rugiada Dry"
         }
       }
     },
     "error": {
       "invalid_temperature_range": "La temperatura target minima deve essere inferiore alla massima.",
       "invalid_sensor_range": "Ogni valore minimo dei sensori deve essere inferiore al massimo.",
-      "invalid_dry_range": "L'umidità dry OFF deve essere inferiore a quella ON.",
+      "invalid_humidity_target_range": "Il target umidità minimo deve essere inferiore al massimo.",
       "invalid_power_range": "La soglia di potenza OFF deve essere inferiore a quella ON."
     }
   },
