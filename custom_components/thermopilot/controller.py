@@ -1033,3 +1033,23 @@ class ThermoPilotController:
         if self.sensor_health.get("status") == "degraded":
             return "degraded"
         return "online"
+
+    @property
+    def unified_status(self) -> str:
+        """Return one localized state for operation and controller health."""
+        health = self.diagnostic_status
+        if health != "online":
+            return health
+        if self.command_phase in {
+            "starting",
+            "stopping",
+            "waiting",
+            "retrying",
+            "unknown",
+        }:
+            return self.command_phase
+        if self.command_phase == "failed":
+            return "error"
+        if self.has_power_feedback:
+            return self.power_classification
+        return "on" if self.state.physical_on else "off"

@@ -135,15 +135,18 @@
   },
   "entity": {
     "sensor": {
-      "diagnostics": {
-        "name": "Diagnostica"
-      },
-      "power_feedback_status": {
-        "name": "Stato feedback consumo",
+      "status": {
+        "name": "Stato",
         "state": {
+          "initializing": "Avvio",
+          "degraded": "Degradato",
+          "error": "Errore",
           "off": "Spento",
-          "starting": "Avvio",
           "on": "Attivo",
+          "starting": "Accensione",
+          "stopping": "Spegnimento",
+          "waiting": "Attesa",
+          "retrying": "Riprova",
           "unknown": "Ignoto"
         }
       }

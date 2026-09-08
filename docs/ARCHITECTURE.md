@@ -4,7 +4,9 @@
 
 ThermoPilot is a Home Assistant helper integration. It consumes states from existing sensor entities and sends commands through existing switch entities. It does not communicate directly with Broadlink hardware.
 
-Each config entry owns one controller, one climate entity, one diagnostic sensor and an optional power-feedback sensor.
+Each config entry owns one controller, one climate entity and one unified Status
+sensor. Power feedback enriches the same Status entity instead of creating a
+second sensor.
 
 ## Runtime components
 
@@ -12,7 +14,7 @@ Each config entry owns one controller, one climate entity, one diagnostic sensor
 - `controller.py` owns listeners, decisions, physical commands, startup reconciliation and persistence.
 - `models.py` contains dependency-light state models and pure thermostat decisions.
 - `climate.py` exposes the native Home Assistant climate API.
-- `sensor.py` exposes general and power-feedback diagnostics.
+- `sensor.py` exposes one translated operational and diagnostic state.
 - `diagnostics.py` provides downloadable non-sensitive diagnostics.
 
 ## State separation
@@ -32,12 +34,12 @@ ThermoPilot separates:
 
 This distinction prevents an active climate mode in `idle` from being mistaken for a physically running device during startup restoration.
 
-The power-feedback sensor keeps its primary state limited to `off`, `starting`,
-`on` and `unknown`. Transient command progress is exposed separately through
-the compact `command_phase` attribute. Its stable values are `idle`, `starting`,
-`stopping`, `waiting`, `retrying`, `confirmed`, `failed` and `unknown`, so
-dashboards can localize them without changing the integration's
-machine-readable contract.
+The unified sensor prioritizes controller health, then transient command
+progress, then physical state. It exposes `thermopilot_role: status` so a
+dashboard can discover it through the device shared with the climate entity.
+Transient progress also remains available through the compact `command_phase`
+attribute. Its stable values are `idle`, `starting`, `stopping`, `waiting`,
+`retrying`, `confirmed`, `failed` and `unknown`.
 
 ## Safety invariants
 

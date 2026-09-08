@@ -4,6 +4,24 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-08
+
+### Changed
+
+- Consolidated controller health, physical state and command progress into one
+  always-present, translated Status sensor.
+- Preserved the former Diagnostics sensor unique ID so existing installations
+  keep the entity instead of receiving another one.
+- Added `thermopilot_role: status` as a stable discovery marker for dashboards.
+- Removed creation of the separate power-feedback status sensor; power,
+  confirmation quality and command progress now belong to the unified entity.
+
+### Migration
+
+- Existing dashboards using the former power-feedback sensor should select the
+  unified Status entity. The old registry entry may remain unavailable until it
+  is removed manually after dashboard migration.
+
 ## [0.2.1] - 2026-09-08
 
 ### Added

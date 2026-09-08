@@ -135,15 +135,18 @@
   },
   "entity": {
     "sensor": {
-      "diagnostics": {
-        "name": "Diagnostics"
-      },
-      "power_feedback_status": {
-        "name": "Power feedback status",
+      "status": {
+        "name": "Status",
         "state": {
+          "initializing": "Initializing",
+          "degraded": "Degraded",
+          "error": "Error",
           "off": "Off",
-          "starting": "Starting",
           "on": "On",
+          "starting": "Starting",
+          "stopping": "Stopping",
+          "waiting": "Waiting",
+          "retrying": "Retrying",
           "unknown": "Unknown"
         }
       }

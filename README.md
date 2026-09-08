@@ -24,14 +24,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.2.1` |
+| **Current version** | `0.3.0` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.2.1 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.3.0 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 > [!IMPORTANT]
 > ThermoPilot intentionally remains unavailable during its default 15-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
@@ -53,7 +53,12 @@ The integration is configured from the Home Assistant UI. No AppDaemon instance,
 
 ### Home Assistant Integration and Device
 
-ThermoPilot is installed and managed as a HACS custom integration. Each configured thermostat is represented as one Home Assistant device that groups its climate entity, diagnostic sensor and optional power-feedback status sensor. It therefore appears with regular integrations instead of dispersing its configuration among Home Assistant Helpers.
+ThermoPilot is installed and managed as a HACS custom integration. Each
+configured thermostat is represented as one Home Assistant device that groups
+its climate entity and unified Status sensor. Optional power feedback enriches
+the same sensor instead of creating another entity. The thermostat therefore
+appears with regular integrations instead of dispersing its configuration among
+Home Assistant Helpers.
 
 ---
 
@@ -75,7 +80,7 @@ ThermoPilot is installed and managed as a HACS custom integration. Each configur
 - 💾 Persistent thermostat and last physical-command state.
 - ⏱️ Guarded startup and configurable restoration delays.
 - ⚡ Dedicated power feedback, manual-operation detection and retry support.
-- 🩺 Native diagnostics and optional power-feedback status sensor.
+- 🩺 One translated status and diagnostics sensor for every strategy.
 - 🌍 English and Italian UI translations.
 - 📦 HACS-ready repository layout.
 
@@ -87,7 +92,9 @@ ThermoPilot works with standard Home Assistant climate cards and any dashboard t
 
 For the intended visual experience, we recommend pairing it with [ThermoMatrix Card](https://github.com/issu-lab/thermomatrix-card). Both projects were created from the same requirement: a clear, reliable and reusable Home Assistant climate interface.
 
-ThermoMatrix automatically reads the HVAC modes and presets exposed by ThermoPilot, displays `preset_mode: none` as **Manual**, and can use ThermoPilot's dedicated power-feedback status sensor as its optional extended status entity.
+ThermoMatrix automatically reads the HVAC modes and presets exposed by
+ThermoPilot, displays `preset_mode: none` as **Manual**, and can use
+ThermoPilot's unified Status sensor as its extended status entity.
 
 ```yaml
 type: custom:thermomatrix-card
@@ -96,7 +103,8 @@ show_presets: true
 temperature_step: 0.1
 ```
 
-Installations with dedicated power feedback may also assign ThermoPilot's power-feedback status sensor to ThermoMatrix's optional `status_entity` setting.
+Until automatic discovery is available in ThermoMatrix, the unified Status
+sensor can be assigned to its optional `status_entity` setting.
 
 > [!NOTE]
 > ThermoMatrix is optional. ThermoPilot has no dashboard dependency and remains fully usable with native Home Assistant cards.
@@ -228,7 +236,7 @@ State quality is reported as `confirmed`.
 
 ## Diagnostics
 
-Each thermostat creates one diagnostic sensor containing:
+Each thermostat creates one translated Status sensor containing:
 
 - integration and configuration versions;
 - hardware strategy;
@@ -238,16 +246,20 @@ Each thermostat creates one diagnostic sensor containing:
 - latest error;
 - physical-state estimate and quality.
 
-Power-feedback installations also create a dedicated status sensor with power
-classification and measured power. Its primary state remains the translated
-physical classification: Off, Starting, On or Unknown. It also exposes the
-compact, language-independent `command_phase` codes `idle`, `starting`,
-`stopping`, `waiting`, `retrying`, `confirmed`, `failed` and `unknown`, together
-with the requested physical state, current and maximum attempt, and whether
-confirmation is pending. Dashboards such as ThermoMatrix can translate these
-stable codes without confusing a command transition with confirmed physical
-state. Downloadable integration diagnostics exclude command entity IDs and
-notification targets.
+Its primary state combines health and operation: Initializing, Degraded, Error,
+Off, On, Starting, Stopping, Waiting, Retrying or Unknown. Without power
+feedback, physical state is explicitly marked `estimated`; with power feedback
+it is `confirmed`. The entity also exposes measured power when available, the
+compact `command_phase`, requested physical state, attempt counters and pending
+confirmation.
+
+The entity retains the former Diagnostics unique ID and exposes
+`thermopilot_role: status`, allowing dashboards such as ThermoMatrix to discover
+it from the climate entity's device. Installations upgrading from 0.2.1 may
+retain the removed power-feedback entity as unavailable in the entity registry;
+after migrating dashboards to the unified Status entity, that stale registry
+entry can be removed manually. Downloadable integration diagnostics exclude
+command entity IDs and notification targets.
 
 ---
 
@@ -300,7 +312,7 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.2.1.
+NUT support is not implemented in version 0.3.0.
 
 ---
 

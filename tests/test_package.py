@@ -98,7 +98,7 @@ class PackageTests(unittest.TestCase):
             next_method = controller.find("\n    async def ", start + 10)
             method = controller[start:next_method]
             self.assertIn("if self.commands_blocked:", method)
-        self.assertIn("return self.controller.diagnostic_status", sensor)
+        self.assertIn("return self.controller.unified_status", sensor)
         self.assertIn('self.last_error == "power_sensor_degraded"', controller)
 
     def test_existing_startup_delay_is_clamped_to_new_safe_range(self):
@@ -160,8 +160,9 @@ class PackageTests(unittest.TestCase):
             "maximum_attempts",
             "confirmation_pending",
         ):
-            self.assertIn(f'"{attribute}"', sensor)
             self.assertIn(f'"{attribute}"', controller)
+        self.assertIn("self.controller.diagnostic_attributes", sensor)
+        self.assertIn('"thermopilot_role": "status"', sensor)
         for phase in (
             "idle",
             "starting",
@@ -175,16 +176,38 @@ class PackageTests(unittest.TestCase):
             self.assertIn(phase, controller)
             self.assertIn(phase, architecture)
 
-    def test_power_status_uses_translated_enum_states(self):
+    def test_single_status_sensor_uses_translated_enum_states(self):
         sensor = (INTEGRATION / "sensor.py").read_text()
         english = json.loads((INTEGRATION / "translations" / "en.json").read_text())
         italian = json.loads((INTEGRATION / "translations" / "it.json").read_text())
         self.assertIn("SensorDeviceClass.ENUM", sensor)
-        self.assertIn('_attr_options = ["off", "starting", "on", "unknown"]', sensor)
-        expected = {"off", "starting", "on", "unknown"}
+        self.assertIn("ThermoPilotStatusSensor(controller, entry)", sensor)
+        self.assertNotIn("ThermoPilotPowerStatusSensor", sensor)
+        self.assertIn('f"{entry.data[CONF_DEVICE_ID]}_diagnostics"', sensor)
+        self.assertIn('"thermopilot_role": "status"', sensor)
+        expected = {
+            "initializing",
+            "degraded",
+            "error",
+            "off",
+            "on",
+            "starting",
+            "stopping",
+            "waiting",
+            "retrying",
+            "unknown",
+        }
         for translation in (english, italian):
-            states = translation["entity"]["sensor"]["power_feedback_status"]["state"]
+            states = translation["entity"]["sensor"]["status"]["state"]
             self.assertEqual(set(states), expected)
+
+    def test_unified_status_falls_back_to_estimated_physical_state(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        start = controller.index("    def unified_status")
+        method = controller[start:]
+        self.assertIn('if self.has_power_feedback:', method)
+        self.assertIn('return "on" if self.state.physical_on else "off"', method)
+        self.assertIn('if health != "online":', method)
 
     def test_new_physical_request_preempts_pending_confirmation(self):
         controller = (INTEGRATION / "controller.py").read_text()

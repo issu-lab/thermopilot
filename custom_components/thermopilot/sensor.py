@@ -1,4 +1,4 @@
-"""Diagnostic sensors for ThermoPilot."""
+"""Unified status sensor for ThermoPilot."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import CONF_DEVICE_ID, DOMAIN, STRATEGY_POWER_TOGGLE
+from .const import CONF_DEVICE_ID, DOMAIN
 from .controller import ThermoPilotController
 
 
@@ -18,12 +18,9 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up general and optional power-feedback diagnostics."""
+    """Set up the unified status and diagnostics entity."""
     controller: ThermoPilotController = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = [ThermoPilotDiagnosticSensor(controller, entry)]
-    if controller.has_power_feedback:
-        entities.append(ThermoPilotPowerStatusSensor(controller, entry))
-    async_add_entities(entities)
+    async_add_entities([ThermoPilotStatusSensor(controller, entry)])
 
 
 class ThermoPilotSensorBase(SensorEntity):
@@ -46,9 +43,22 @@ class ThermoPilotSensorBase(SensorEntity):
         self.async_write_ha_state()
 
 
-class ThermoPilotDiagnosticSensor(ThermoPilotSensorBase):
+class ThermoPilotStatusSensor(ThermoPilotSensorBase):
     _attr_has_entity_name = True
-    _attr_translation_key = "diagnostics"
+    _attr_translation_key = "status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [
+        "initializing",
+        "degraded",
+        "error",
+        "off",
+        "on",
+        "starting",
+        "stopping",
+        "waiting",
+        "retrying",
+        "unknown",
+    ]
 
     def __init__(self, controller: ThermoPilotController, entry: ConfigEntry) -> None:
         super().__init__(controller, entry)
@@ -56,36 +66,12 @@ class ThermoPilotDiagnosticSensor(ThermoPilotSensorBase):
 
     @property
     def native_value(self) -> str:
-        return self.controller.diagnostic_status
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        return self.controller.diagnostic_attributes
-
-
-class ThermoPilotPowerStatusSensor(ThermoPilotSensorBase):
-    _attr_has_entity_name = True
-    _attr_translation_key = "power_feedback_status"
-    _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["off", "starting", "on", "unknown"]
-
-    def __init__(self, controller: ThermoPilotController, entry: ConfigEntry) -> None:
-        super().__init__(controller, entry)
-        self._attr_unique_id = f"{entry.data[CONF_DEVICE_ID]}_stato"
-
-    @property
-    def native_value(self) -> str:
-        return self.controller.power_classification
+        return self.controller.unified_status
 
     @property
     def extra_state_attributes(self) -> dict:
         return {
+            **self.controller.diagnostic_attributes,
+            "thermopilot_role": "status",
             "power": self.controller.power,
-            "last_command_result": self.controller.last_command_result,
-            "command_phase": self.controller.command_phase,
-            "requested_physical_state": self.controller.requested_physical_state,
-            "attempt": self.controller.command_attempt,
-            "maximum_attempts": self.controller.maximum_attempts,
-            "confirmation_pending": self.controller.confirmation_pending,
-            "state_quality": "confirmed",
         }
