@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -66,6 +66,8 @@ class ThermoPilotDiagnosticSensor(ThermoPilotSensorBase):
 class ThermoPilotPowerStatusSensor(ThermoPilotSensorBase):
     _attr_has_entity_name = True
     _attr_translation_key = "power_feedback_status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["off", "starting", "on", "unknown"]
 
     def __init__(self, controller: ThermoPilotController, entry: ConfigEntry) -> None:
         super().__init__(controller, entry)
@@ -80,5 +82,10 @@ class ThermoPilotPowerStatusSensor(ThermoPilotSensorBase):
         return {
             "power": self.controller.power,
             "last_command_result": self.controller.last_command_result,
+            "command_phase": self.controller.command_phase,
+            "requested_physical_state": self.controller.requested_physical_state,
+            "attempt": self.controller.command_attempt,
+            "maximum_attempts": self.controller.maximum_attempts,
+            "confirmation_pending": self.controller.confirmation_pending,
             "state_quality": "confirmed",
         }

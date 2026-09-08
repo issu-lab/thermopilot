@@ -24,14 +24,14 @@ ThermoPilot creates native climate entities from existing sensors and hardware c
 | **Recommended for production** | ❌ Not yet |
 | **Setup difficulty** | 🟢 Beginner |
 | **Documentation** | ✅ Complete for initial testing |
-| **Current version** | `0.1.5` |
+| **Current version** | `0.2.1` |
 | **Minimum Home Assistant** | 2026.8.0 |
 | **Local tests** | 🟡 Initial suite |
 | **Discrete strategy validation** | ❌ Not yet |
 | **Power-feedback strategy validation** | ❌ Not yet |
 
 > [!WARNING]
-> Version 0.1.5 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
+> Version 0.2.1 is a testing release. Validate each hardware strategy with the documented rollback procedure before using it in production.
 
 > [!IMPORTANT]
 > ThermoPilot intentionally remains unavailable during its default 15-second initialization period. Do not operate it from ThermoMatrix or another dashboard until it is online. Commands received during initialization are discarded to ensure that saved state, sensors and the physical device are synchronized correctly.
@@ -238,7 +238,16 @@ Each thermostat creates one diagnostic sensor containing:
 - latest error;
 - physical-state estimate and quality.
 
-Power-feedback installations also create a dedicated status sensor with power classification and measured power. Downloadable integration diagnostics exclude command entity IDs and notification targets.
+Power-feedback installations also create a dedicated status sensor with power
+classification and measured power. Its primary state remains the translated
+physical classification: Off, Starting, On or Unknown. It also exposes the
+compact, language-independent `command_phase` codes `idle`, `starting`,
+`stopping`, `waiting`, `retrying`, `confirmed`, `failed` and `unknown`, together
+with the requested physical state, current and maximum attempt, and whether
+confirmation is pending. Dashboards such as ThermoMatrix can translate these
+stable codes without confusing a command transition with confirmed physical
+state. Downloadable integration diagnostics exclude command entity IDs and
+notification targets.
 
 ---
 
@@ -291,13 +300,13 @@ Historical site-specific folders may be deleted from production only after the c
 
 A future optional NUT integration may distinguish an integration restart from a confirmed power outage while Home Assistant remains powered by a UPS. It may persist outage and restoration timestamps and trigger discrete-command reconciliation only after mains power returns.
 
-NUT support is not implemented in version 0.1.5.
+NUT support is not implemented in version 0.2.1.
 
 ---
 
 ## Known Limitations
 
-- Production validation has not started.
+- Production command validation is not yet complete.
 - Discrete commands cannot provide physical feedback.
 - Power feedback cannot identify an ambiguous manually selected HVAC mode.
 - Four standard presets are supported; arbitrary custom presets are planned for a later version.

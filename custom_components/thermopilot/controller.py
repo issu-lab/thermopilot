@@ -103,6 +103,9 @@ class ThermoPilotController:
         self.sensor_health: dict[str, Any] = {}
         self.last_command_result = "none"
         self.last_error: str | None = None
+        self.command_phase = "idle"
+        self.requested_physical_state: str | None = None
+        self.command_attempt = 0
         self.started_at = dt_util.utcnow().isoformat()
         self._listeners: list[Callable[[], None]] = []
         self._update_callbacks: list[Callable[[], None]] = []
@@ -138,6 +141,16 @@ class ThermoPilotController:
     @property
     def has_power_feedback(self) -> bool:
         return bool(self.data.get(CONF_POWER_SENSOR))
+
+    @property
+    def confirmation_pending(self) -> bool:
+        """Return whether a power-feedback confirmation is in progress."""
+        return self._command_pending
+
+    @property
+    def maximum_attempts(self) -> int:
+        """Return the configured maximum command attempts."""
+        return int(self.option(OPT_MAX_ATTEMPTS))
 
     @property
     def target_temperature(self) -> float | None:
@@ -351,6 +364,7 @@ class ThermoPilotController:
         if classification == "unknown":
             self.last_error = "power_sensor_degraded"
             self.commands_blocked = True
+            self.command_phase = "unknown"
             if self._initialized and not self._power_unavailable_cancel:
                 self._power_unavailable_cancel = async_call_later(
                     self.hass,
@@ -367,6 +381,8 @@ class ThermoPilotController:
         self.available = self._initialized
         self.commands_blocked = not self._initialized
         self.last_error = None
+        if self.command_phase == "unknown":
+            self.command_phase = "idle"
         recovered_from_feedback_loss = self._initialized and (
             was_unavailable or was_blocked
         )
@@ -647,10 +663,17 @@ class ThermoPilotController:
                 self.state.physical_mode = mode if turn_on else None
                 self.last_command_result = "already_confirmed"
                 self.last_error = None
+                self.command_phase = "confirmed"
+                self.requested_physical_state = "on" if turn_on else "off"
+                self.command_attempt = 0
                 await self._save()
                 self._notify_update()
                 return True
 
+            self.command_phase = "starting" if turn_on else "stopping"
+            self.requested_physical_state = "on" if turn_on else "off"
+            self.command_attempt = 1
+            self._notify_update()
             await self._async_issue_physical_command(mode, turn_on)
             self.state.physical_on = turn_on
             self.state.physical_mode = mode if turn_on else None
@@ -659,11 +682,13 @@ class ThermoPilotController:
 
             if not self.has_power_feedback:
                 self.last_command_result = "on" if turn_on else "off"
+                self.command_phase = "confirmed"
                 await self._save()
                 self._notify_update()
                 return True
 
             self._command_pending = True
+            self.command_phase = "waiting"
             self.last_command_result = (
                 "on_sent_waiting_feedback"
                 if turn_on
@@ -764,10 +789,11 @@ class ThermoPilotController:
         self, mode: str, turn_on: bool, generation: int
     ) -> bool:
         """Confirm in the background and recover without blocking HA services."""
-        attempts = int(self.option(OPT_MAX_ATTEMPTS))
+        attempts = self.maximum_attempts
         timeout = float(self.option(OPT_FEEDBACK_TIMEOUT))
         try:
             for attempt in range(1, attempts + 1):
+                self.command_attempt = attempt
                 if await self._async_wait_for_power_target(turn_on, timeout):
                     if generation != self._confirmation_generation:
                         return False
@@ -775,11 +801,15 @@ class ThermoPilotController:
                     self.state.physical_mode = mode if turn_on else None
                     self.last_command_result = f"confirmed_attempt_{attempt}"
                     self.last_error = None
+                    self.command_phase = "confirmed"
                     await self._save()
                     self._notify_update()
                     return True
                 if attempt >= attempts or generation != self._confirmation_generation:
                     break
+                self.command_phase = "retrying"
+                self.command_attempt = attempt + 1
+                self._notify_update()
                 async with self._command_lock:
                     await self._async_issue_physical_command(mode, not turn_on)
                 await self._async_wait_for_power_target(not turn_on, timeout)
@@ -787,6 +817,8 @@ class ThermoPilotController:
                     return False
                 async with self._command_lock:
                     await self._async_issue_physical_command(mode, turn_on)
+                self.command_phase = "waiting"
+                self._notify_update()
 
             if generation == self._confirmation_generation:
                 observed_on = self.power_classification in {"starting", "on"}
@@ -794,6 +826,7 @@ class ThermoPilotController:
                 self.state.physical_mode = mode if observed_on else None
                 self.last_command_result = "failed"
                 self.last_error = "power_feedback_not_reached"
+                self.command_phase = "failed"
                 await self._save()
                 await self._async_notify_failure(turn_on, attempts)
                 self._notify_update()
@@ -835,6 +868,7 @@ class ThermoPilotController:
         self.commands_blocked = True
         self.last_error = "power_sensor_unavailable"
         self.last_command_result = "feedback_unavailable"
+        self.command_phase = "unknown"
         configured = str(self.option(OPT_NOTIFICATION_SERVICE)).strip()
         if configured and "." in configured and not self._power_outage_notified:
             domain, service = configured.split(".", 1)
@@ -921,6 +955,9 @@ class ThermoPilotController:
             self.state.hvac_mode = MODE_OFF
             self.hvac_action = "off"
             self.last_command_result = "manual_off_detected"
+            self.command_phase = "idle"
+            self.requested_physical_state = None
+            self.command_attempt = 0
             await self._save()
             self._notify_update()
             return
@@ -940,6 +977,9 @@ class ThermoPilotController:
             self.hvac_action = "unknown"
             self.manual_mode_unknown = True
             self.last_command_result = "manual_mode_unknown"
+        self.command_phase = "idle"
+        self.requested_physical_state = None
+        self.command_attempt = 0
         await self._save()
         self._notify_update()
 
@@ -972,6 +1012,11 @@ class ThermoPilotController:
             "last_command_result": self.last_command_result,
             "last_command_at": self.state.last_command_at,
             "last_error": self.last_error,
+            "command_phase": self.command_phase,
+            "requested_physical_state": self.requested_physical_state,
+            "attempt": self.command_attempt,
+            "maximum_attempts": self.maximum_attempts,
+            "confirmation_pending": self.confirmation_pending,
             "physical_state": "on" if self.state.physical_on else "off",
             "state_quality": "confirmed" if self.has_power_feedback else "estimated",
         }

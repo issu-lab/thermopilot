@@ -139,7 +139,13 @@
         "name": "Diagnostics"
       },
       "power_feedback_status": {
-        "name": "Power feedback status"
+        "name": "Power feedback status",
+        "state": {
+          "off": "Off",
+          "starting": "Starting",
+          "on": "On",
+          "unknown": "Unknown"
+        }
       }
     }
   }

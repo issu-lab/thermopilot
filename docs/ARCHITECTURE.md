@@ -27,9 +27,17 @@ ThermoPilot separates:
 - last physical command state;
 - current HVAC action;
 - observed or estimated physical state;
+- command phase, requested physical state, attempt and pending confirmation;
 - sensor health.
 
 This distinction prevents an active climate mode in `idle` from being mistaken for a physically running device during startup restoration.
+
+The power-feedback sensor keeps its primary state limited to `off`, `starting`,
+`on` and `unknown`. Transient command progress is exposed separately through
+the compact `command_phase` attribute. Its stable values are `idle`, `starting`,
+`stopping`, `waiting`, `retrying`, `confirmed`, `failed` and `unknown`, so
+dashboards can localize them without changing the integration's
+machine-readable contract.
 
 ## Safety invariants
 

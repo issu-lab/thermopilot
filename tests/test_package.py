@@ -149,6 +149,43 @@ class PackageTests(unittest.TestCase):
         end = controller.index("    def _toggle_target_reached", start)
         self.assertNotIn("asyncio.sleep", controller[start:end])
 
+    def test_power_feedback_exposes_compact_command_progress(self):
+        controller = (INTEGRATION / "controller.py").read_text()
+        sensor = (INTEGRATION / "sensor.py").read_text()
+        architecture = (ROOT / "docs" / "ARCHITECTURE.md").read_text()
+        for attribute in (
+            "command_phase",
+            "requested_physical_state",
+            "attempt",
+            "maximum_attempts",
+            "confirmation_pending",
+        ):
+            self.assertIn(f'"{attribute}"', sensor)
+            self.assertIn(f'"{attribute}"', controller)
+        for phase in (
+            "idle",
+            "starting",
+            "stopping",
+            "waiting",
+            "retrying",
+            "confirmed",
+            "failed",
+            "unknown",
+        ):
+            self.assertIn(phase, controller)
+            self.assertIn(phase, architecture)
+
+    def test_power_status_uses_translated_enum_states(self):
+        sensor = (INTEGRATION / "sensor.py").read_text()
+        english = json.loads((INTEGRATION / "translations" / "en.json").read_text())
+        italian = json.loads((INTEGRATION / "translations" / "it.json").read_text())
+        self.assertIn("SensorDeviceClass.ENUM", sensor)
+        self.assertIn('_attr_options = ["off", "starting", "on", "unknown"]', sensor)
+        expected = {"off", "starting", "on", "unknown"}
+        for translation in (english, italian):
+            states = translation["entity"]["sensor"]["power_feedback_status"]["state"]
+            self.assertEqual(set(states), expected)
+
     def test_new_physical_request_preempts_pending_confirmation(self):
         controller = (INTEGRATION / "controller.py").read_text()
         self.assertIn("_confirmation_generation", controller)

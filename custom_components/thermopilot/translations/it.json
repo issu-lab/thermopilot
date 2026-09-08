@@ -139,7 +139,13 @@
         "name": "Diagnostica"
       },
       "power_feedback_status": {
-        "name": "Stato feedback consumo"
+        "name": "Stato feedback consumo",
+        "state": {
+          "off": "Spento",
+          "starting": "Avvio",
+          "on": "Attivo",
+          "unknown": "Ignoto"
+        }
       }
     }
   }

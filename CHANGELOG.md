@@ -4,6 +4,22 @@ All notable changes to ThermoPilot are documented in this file.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-09-08
+
+### Added
+
+- Added compact command-operation phases to the existing power-feedback status
+  sensor, without creating another entity or replacing its physical state.
+- Exposed the requested physical state, current and maximum attempt, and pending
+  confirmation for dashboards and diagnostics.
+- Added native English and Italian translations for the power classification
+  enum shown by Home Assistant.
+
+### Changed
+
+- Documented stable language-independent phase codes for localized clients such
+  as ThermoMatrix.
+
 ## [0.2.0] - 2026-09-08
 
 ### Changed
